@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shortigo/l10n/app_localizations.dart';
+import 'package:shortigo/features/discover/presentation/section_title_localizer.dart';
 
 Widget _localizedApp(Locale locale) {
   return MaterialApp(
@@ -10,7 +11,7 @@ Widget _localizedApp(Locale locale) {
     home: Builder(
       builder: (context) {
         final l10n = AppLocalizations.of(context)!;
-        return Column(
+        return ListView(
           children: [
             Text(l10n.discover),
             Text(l10n.shorts),
@@ -20,6 +21,9 @@ Widget _localizedApp(Locale locale) {
             Text(l10n.settings),
             Text(l10n.getVip),
             Text(l10n.restorePurchases),
+            Text(localizedSectionTitle(l10n, 'trending', 'fallback')),
+            Text(localizedSectionTitle(l10n, 'dubbed', 'fallback')),
+            Text(localizedSectionTitle(l10n, 'rebirth', 'fallback')),
           ],
         );
       },
@@ -58,8 +62,12 @@ void main() {
     expect(find.text('Settings'), findsOneWidget);
     expect(find.text('Get VIP'), findsOneWidget);
     expect(find.text('Restore purchases'), findsOneWidget);
+    expect(find.text('Trending'), findsOneWidget);
+    expect(find.text('Vietnamese Dubbed'), findsOneWidget);
+    expect(find.text('Rebirth / Time Travel'), findsOneWidget);
     expect(find.text('Khám phá'), findsNothing);
     expect(find.text('Phim ngắn'), findsNothing);
     expect(find.text('Phần thưởng'), findsNothing);
+    expect(find.text('Thịnh hành'), findsNothing);
   });
 }

@@ -52,7 +52,6 @@ class ContentApiSourceStatus {
     if (rawProviders is! List) {
       throw const ContentApiException(
         code: 'invalid-source-status',
-        message: 'Máy chủ không trả về danh sách provider hợp lệ.',
       );
     }
 
@@ -74,25 +73,24 @@ class ContentApiSourceStatus {
 class ContentApiException implements Exception {
   const ContentApiException({
     required this.code,
-    required this.message,
+    this.message,
     this.statusCode,
     this.cause,
   });
 
   final String code;
-  final String message;
+  final String? message;
   final int? statusCode;
   final Object? cause;
 
   @override
-  String toString() => 'ContentApiException($code): $message';
+  String toString() => 'ContentApiException($code)';
 }
 
 class ContentApiSourceLockedException extends ContentApiException {
   const ContentApiSourceLockedException({super.statusCode = 403})
       : super(
           code: 'source-locked',
-          message: 'Tập này hiện chưa có nguồn phát công khai.',
         );
 }
 

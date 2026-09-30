@@ -45,6 +45,9 @@
   "forYou": "Dành cho bạn",
   "newUpdates": "Mới cập nhật",
   "hot": "Thịnh hành",
+  "trending": "Thịnh hành",
+  "dubbed": "Lồng tiếng Việt",
+  "vietsub": "Vietsub",
   "romance": "Ngôn tình",
   "ceo": "Tổng tài",
   "revenge": "Báo thù",
@@ -52,6 +55,7 @@
   "action": "Hành động",
   "fantasy": "Huyền huyễn",
   "recommended": "Có thể bạn thích",
+  "rebirth": "Tái sinh / Xuyên không",
   "adventure": "Phiêu lưu",
   "scary": "Kinh dị",
   "anime": "Hoạt hình",
@@ -144,4 +148,23 @@
   ,"notFoundError": "Không tìm thấy nội dung trên máy chủ."
   ,"sourceLockedError": "Tập này hiện chưa có nguồn phát công khai."
   ,"genericContentApiError": "Không thể tải nội dung lúc này. Vui lòng thử lại."
+  ,"authInvalidEmail": "Địa chỉ email không hợp lệ."
+  ,"authInvalidCredential": "Email hoặc mật khẩu không đúng."
+  ,"authEmailInUse": "Email này đã được đăng ký."
+  ,"authWeakPassword": "Mật khẩu quá yếu."
+  ,"authTooManyRequests": "Bạn đã thử quá nhiều lần. Vui lòng thử lại sau."
+  ,"authNetwork": "Không thể kết nối tới dịch vụ tài khoản."
+  ,"authUserDisabled": "Tài khoản này đã bị vô hiệu hóa."
+  ,"authUnavailable": "Tính năng đăng nhập hiện chưa khả dụng."
+  ,"authUnknown": "Không thể đăng nhập lúc này. Vui lòng thử lại."
+  ,"somethingWentWrong": "Đã xảy ra lỗi"
+  ,"unexpectedError": "Ứng dụng gặp sự cố ngoài dự kiến. Vui lòng thử lại."
+  ,"accountError": "Lỗi tài khoản"
+  ,"subscriptionError": "Lỗi đăng ký dịch vụ"
+  ,"subscriptionPurchaseFailed": "Không thể hoàn tất giao dịch mua. Vui lòng thử lại."
+  ,"subscriptionRestoreFailed": "Không thể khôi phục giao dịch mua. Vui lòng thử lại."
+  ,"subscriptionNotConfigured": "Gói dịch vụ hiện chưa được cấu hình."
+  ,"accountSignInRequired": "Vui lòng đăng nhập lại để tiếp tục."
+  ,"accountRecentLoginRequired": "Vì lý do bảo mật, hãy đăng nhập lại trước khi xóa tài khoản."
+  ,"accountDeletionFailed": "Không thể xóa tài khoản. Vui lòng thử lại."
 }

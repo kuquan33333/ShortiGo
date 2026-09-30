@@ -114,7 +114,7 @@ class RewardsNotifier extends AsyncNotifier<RewardsState> {
       state = AsyncData(
         (current ?? RewardsState(user: user)).copyWith(
           user: user,
-          error: error.toString(),
+          error: 'reward-operation-failed',
         ),
       );
     }
@@ -151,7 +151,7 @@ class RewardsNotifier extends AsyncNotifier<RewardsState> {
             );
       }
     } catch (error) {
-      errorMessage = error.toString();
+      errorMessage = 'reward-operation-failed';
     } finally {
       state = AsyncData(
         (state.value ?? const RewardsState()).copyWith(

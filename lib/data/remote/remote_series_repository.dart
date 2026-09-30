@@ -160,7 +160,6 @@ class RemoteSeriesRepository implements SeriesRepository {
 
     throw const ContentApiException(
       code: 'not-found',
-      message: 'Không tìm thấy phim trên máy chủ.',
       statusCode: 404,
     );
   }

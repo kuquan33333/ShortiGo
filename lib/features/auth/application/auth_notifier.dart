@@ -4,6 +4,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../../core/providers.dart';
 import '../../../bootstrap/firebase_bootstrap.dart';
+import 'auth_error.dart';
 
 class AuthState {
   const AuthState({
@@ -33,7 +34,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
           .signInWithEmailAndPassword(email: email, password: password);
       state = AsyncData(AuthState(user: cred.user));
     } catch (error) {
-      state = AsyncData(AuthState(error: error.toString()));
+      state = AsyncData(AuthState(error: authErrorCode(error)));
     }
   }
 
@@ -47,7 +48,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       await cred.user?.sendEmailVerification();
       state = AsyncData(AuthState(user: cred.user));
     } catch (error) {
-      state = AsyncData(AuthState(error: error.toString()));
+      state = AsyncData(AuthState(error: authErrorCode(error)));
     }
   }
 
@@ -72,7 +73,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
           await ref.read(firebaseAuthProvider).signInWithCredential(credential);
       state = AsyncData(AuthState(user: cred.user));
     } catch (error) {
-      state = AsyncData(AuthState(error: error.toString()));
+      state = AsyncData(AuthState(error: authErrorCode(error)));
     }
   }
 
@@ -85,7 +86,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   bool _ensureFirebase() {
     if (FirebaseBootstrap.isAvailable) return true;
     state = const AsyncData(
-      AuthState(error: 'Dịch vụ tài khoản hiện chưa được cấu hình.'),
+      AuthState(error: 'account-service-unavailable'),
     );
     return false;
   }

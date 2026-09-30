@@ -7,6 +7,7 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../../core/error/friendly_error.dart';
+import '../../../core/async/retryable_future_cache.dart';
 import '../../../core/providers.dart';
 import '../../../domain/entities/episode.dart';
 import '../../../l10n/app_localizations.dart';
@@ -32,7 +33,7 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
     with WidgetsBindingObserver {
   final _pageController = PageController();
   final _preCache = VideoPreCacheManager();
-  final _urlCache = <String, Future<String>>{};
+  final _urlCache = RetryableFutureCache<String, String>();
 
   late final BetterPlayerController _playerController;
 
@@ -375,27 +376,15 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
   }
 
   Future<String> _urlFor(Episode episode) {
-    final cached = _urlCache[episode.id];
-    if (cached != null) return cached;
-
-    final future = ref.read(videoSourceProvider).playableUrl(
-          seriesId: episode.seriesId,
-          episodeId: episode.id,
-          storagePath: episode.videoUrl,
-          chapterIndex: episode.order - 1,
-        );
-    _urlCache[episode.id] = future;
-    unawaited(
-      future.then<void>(
-        (_) {},
-        onError: (Object _, StackTrace __) {
-          if (identical(_urlCache[episode.id], future)) {
-            _urlCache.remove(episode.id);
-          }
-        },
-      ),
+    return _urlCache.getOrCreate(
+      episode.id,
+      () => ref.read(videoSourceProvider).playableUrl(
+            seriesId: episode.seriesId,
+            episodeId: episode.id,
+            storagePath: episode.videoUrl,
+            chapterIndex: episode.sourceChapterIndex ?? episode.order - 1,
+          ),
     );
-    return future;
   }
 
   void _prefetchUrls(List<Episode> episodes) {

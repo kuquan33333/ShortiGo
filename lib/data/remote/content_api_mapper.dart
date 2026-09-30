@@ -12,7 +12,7 @@ class ContentApiMapper {
     final id = _string(json['bookId'] ?? json['id']);
     final title = _string(json['bookName'] ?? json['title']);
     if (id.isEmpty || title.isEmpty) {
-      throw const FormatException('Series thiếu bookId hoặc bookName.');
+      throw const FormatException('missing-book-metadata');
     }
 
     return Series(
@@ -39,7 +39,10 @@ class ContentApiMapper {
     required String seriesId,
   }) {
     final chapterId = _string(json['chapterId'] ?? json['id']);
-    final index = _int(json['chapterIndex'] ?? json['serialNumber']);
+    final sourceChapterIndex = _intOrNull(json['chapterIndex']);
+    final serialNumber = _intOrNull(json['serialNumber']);
+    final index = sourceChapterIndex ??
+        ((serialNumber ?? 1) - 1).clamp(0, 1 << 30).toInt();
     final id = chapterId.isEmpty ? '$seriesId::$index' : chapterId;
     final sourceLocked = _flag(json['isCharge']) ||
         _flag(json['isPay']) ||
@@ -50,7 +53,7 @@ class ContentApiMapper {
     return Episode(
       id: id,
       seriesId: seriesId,
-      order: index + 1,
+      order: serialNumber ?? index + 1,
       // Keep the chapter index in a private sentinel. The player resolves the
       // playable URL lazily through /api/watch instead of resolving every
       // chapter while the list is displayed.
@@ -64,13 +67,14 @@ class ContentApiMapper {
       sourceAvailable: sourceAvailable,
       sourceLocked: sourceLocked,
       chapterName: _string(json['chapterName'] ?? json['chapter_name']),
+      sourceChapterIndex: sourceChapterIndex,
     );
   }
 
   static String watchUrl(Map<String, dynamic> json) {
     final url = _string(json['videoUrl']);
     if (url.isEmpty) {
-      throw const FormatException('Watch response thiếu videoUrl.');
+      throw const FormatException('missing-video-url');
     }
     return url;
   }
@@ -80,6 +84,11 @@ class ContentApiMapper {
   static int _int(Object? value) {
     if (value is num) return value.toInt();
     return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  static int? _intOrNull(Object? value) {
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '');
   }
 
   static bool _flag(Object? value) {

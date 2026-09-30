@@ -16,6 +16,7 @@ abstract class Episode with _$Episode {
     @Default(true) bool sourceAvailable,
     @Default(false) bool sourceLocked,
     String? chapterName,
+    int? sourceChapterIndex,
     int? bonusUnlockCost,
     @Default(0) int watchCount,
     @Default(0) int likeCount,

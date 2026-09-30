@@ -150,6 +150,15 @@ class AppLocalizationsEn extends AppLocalizations {
   String get hot => 'Hot';
 
   @override
+  String get trending => 'Trending';
+
+  @override
+  String get dubbed => 'Vietnamese Dubbed';
+
+  @override
+  String get vietsub => 'Vietnamese Subtitles';
+
+  @override
   String get romance => 'Romance';
 
   @override
@@ -169,6 +178,9 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get recommended => 'Recommended';
+
+  @override
+  String get rebirth => 'Rebirth / Time Travel';
 
   @override
   String get adventure => 'Adventure';
@@ -463,4 +475,68 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get genericContentApiError =>
       'Unable to load content right now. Please try again.';
+
+  @override
+  String get authInvalidEmail => 'Invalid email address.';
+
+  @override
+  String get authInvalidCredential => 'Email or password is incorrect.';
+
+  @override
+  String get authEmailInUse => 'This email is already registered.';
+
+  @override
+  String get authWeakPassword => 'Password is too weak.';
+
+  @override
+  String get authTooManyRequests =>
+      'Too many attempts. Please try again later.';
+
+  @override
+  String get authNetwork => 'Unable to connect to the account service.';
+
+  @override
+  String get authUserDisabled => 'This account has been disabled.';
+
+  @override
+  String get authUnavailable => 'Account sign-in is not available right now.';
+
+  @override
+  String get authUnknown => 'Unable to sign in right now. Please try again.';
+
+  @override
+  String get somethingWentWrong => 'Something went wrong';
+
+  @override
+  String get unexpectedError =>
+      'The app encountered an unexpected problem. Please try again.';
+
+  @override
+  String get accountError => 'Account error';
+
+  @override
+  String get subscriptionError => 'Subscription error';
+
+  @override
+  String get subscriptionPurchaseFailed =>
+      'The purchase could not be completed. Please try again.';
+
+  @override
+  String get subscriptionRestoreFailed =>
+      'Purchases could not be restored. Please try again.';
+
+  @override
+  String get subscriptionNotConfigured =>
+      'Subscriptions are not configured right now.';
+
+  @override
+  String get accountSignInRequired => 'Sign in again to continue.';
+
+  @override
+  String get accountRecentLoginRequired =>
+      'For your security, sign in again before deleting your account.';
+
+  @override
+  String get accountDeletionFailed =>
+      'Account deletion failed. Please try again.';
 }

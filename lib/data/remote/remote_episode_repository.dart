@@ -40,7 +40,6 @@ class RemoteEpisodeRepository implements EpisodeRepository {
     if (episode != null) return episode;
     throw const ContentApiException(
       code: 'episode-not-loaded',
-      message: 'Danh sách tập chưa được tải. Vui lòng mở lại trang phim.',
       statusCode: 404,
     );
   }

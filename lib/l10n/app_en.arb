@@ -45,6 +45,9 @@
   "forYou": "For You",
   "newUpdates": "New",
   "hot": "Hot",
+  "trending": "Trending",
+  "dubbed": "Vietnamese Dubbed",
+  "vietsub": "Vietnamese Subtitles",
   "romance": "Romance",
   "ceo": "CEO",
   "revenge": "Revenge",
@@ -52,6 +55,7 @@
   "action": "Action",
   "fantasy": "Fantasy",
   "recommended": "Recommended",
+  "rebirth": "Rebirth / Time Travel",
   "adventure": "Adventure",
   "scary": "Scary",
   "anime": "Anime",
@@ -144,4 +148,23 @@
   ,"notFoundError": "The content was not found on the server."
   ,"sourceLockedError": "This episode does not have a public playback source yet."
   ,"genericContentApiError": "Unable to load content right now. Please try again."
+  ,"authInvalidEmail": "Invalid email address."
+  ,"authInvalidCredential": "Email or password is incorrect."
+  ,"authEmailInUse": "This email is already registered."
+  ,"authWeakPassword": "Password is too weak."
+  ,"authTooManyRequests": "Too many attempts. Please try again later."
+  ,"authNetwork": "Unable to connect to the account service."
+  ,"authUserDisabled": "This account has been disabled."
+  ,"authUnavailable": "Account sign-in is not available right now."
+  ,"authUnknown": "Unable to sign in right now. Please try again."
+  ,"somethingWentWrong": "Something went wrong"
+  ,"unexpectedError": "The app encountered an unexpected problem. Please try again."
+  ,"accountError": "Account error"
+  ,"subscriptionError": "Subscription error"
+  ,"subscriptionPurchaseFailed": "The purchase could not be completed. Please try again."
+  ,"subscriptionRestoreFailed": "Purchases could not be restored. Please try again."
+  ,"subscriptionNotConfigured": "Subscriptions are not configured right now."
+  ,"accountSignInRequired": "Sign in again to continue."
+  ,"accountRecentLoginRequired": "For your security, sign in again before deleting your account."
+  ,"accountDeletionFailed": "Account deletion failed. Please try again."
 }

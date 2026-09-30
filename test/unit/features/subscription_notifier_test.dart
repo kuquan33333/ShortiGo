@@ -51,4 +51,25 @@ void main() {
     final state = container.read(subscriptionNotifierProvider).requireValue;
     expect(state.message, 'no-active-vip-purchase');
   });
+
+  test('purchase failure is returned as a localizable code', () async {
+    final gateway = _MockIapGateway();
+    when(gateway.getOfferings).thenAnswer((_) async => []);
+    when(() => gateway.purchase('monthly'))
+        .thenThrow(StateError('store unavailable'));
+    final container = ProviderContainer(
+      overrides: [iapGatewayProvider.overrideWithValue(gateway)],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(subscriptionNotifierProvider.future);
+    await container
+        .read(subscriptionNotifierProvider.notifier)
+        .purchase('monthly');
+
+    expect(
+      container.read(subscriptionNotifierProvider).requireValue.error,
+      'subscription-purchase-failed',
+    );
+  });
 }

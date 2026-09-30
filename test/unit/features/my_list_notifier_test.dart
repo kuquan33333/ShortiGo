@@ -1,9 +1,15 @@
+import 'dart:convert';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
+import 'package:http/http.dart';
+import 'package:http/testing.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shortigo/core/providers.dart';
 import 'package:shortigo/data/remote/content_api_models.dart';
+import 'package:shortigo/data/remote/content_api_client.dart';
+import 'package:shortigo/data/remote/remote_series_repository.dart';
 import 'package:shortigo/data/local/guest_favorites_repository.dart';
 import 'package:shortigo/data/local/shortigo_database.dart';
 import 'package:shortigo/domain/entities/category.dart';
@@ -132,5 +138,55 @@ void main() {
     expect(state.series.map((series) => series.id), ['alive']);
     verify(() => repo.byId('dead')).called(1);
     verify(() => repo.byId('alive')).called(1);
+  });
+
+  test('guest favorite survives a new container and resolves detail', () async {
+    final database = ShortigoDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(database.close);
+    final guestRepo = GuestFavoritesRepository(database);
+    await guestRepo.save(_series('restart-series'));
+
+    final firstContainer = _container(
+      repo: repo,
+      user: const AsyncData(null),
+      database: database,
+    );
+    await firstContainer.read(myListNotifierProvider.future);
+    firstContainer.dispose();
+
+    final client = ContentApiClient(
+      defaultBaseUrl: 'https://example.com',
+      httpClient: MockClient((request) async {
+        expect(request.url.path, '/api/book/restart-series');
+        return Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'bookId': 'restart-series',
+              'bookName': 'Series restart-series',
+              'cover': 'https://example.com/restart-series.jpg',
+              'playable': true,
+            },
+          }),
+          200,
+        );
+      }),
+    );
+    final newRepository = RemoteSeriesRepository(client);
+    final secondContainer = ProviderContainer(
+      overrides: [
+        seriesRepositoryProvider.overrideWithValue(newRepository),
+        currentAppUserDocProvider.overrideWith((_) => Stream.value(null)),
+        shortigoDatabaseProvider.overrideWithValue(database),
+      ],
+    );
+    addTearDown(secondContainer.dispose);
+
+    final state = await secondContainer.read(myListNotifierProvider.future);
+    final saved = state.series.single;
+    final resolved = await newRepository.byId(saved.id);
+
+    expect(saved.id, 'restart-series');
+    expect(resolved.title, 'Series restart-series');
   });
 }

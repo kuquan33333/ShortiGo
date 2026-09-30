@@ -69,7 +69,7 @@ void main() {
 
     final state = container.read(rewardsNotifierProvider).requireValue;
     expect(state.isWatchingAd, isFalse);
-    expect(state.error, 'No ad available right now.');
+    expect(state.error, 'reward-operation-failed');
     verifyNever(
       () => userRepository.grantDemoBonus(
         userId: any(named: 'userId'),

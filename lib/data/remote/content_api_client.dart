@@ -38,7 +38,6 @@ class ContentApiClient {
     if (normalized == null) {
       throw const ContentApiException(
         code: 'invalid-url',
-        message: 'URL máy chủ phải bắt đầu bằng http:// hoặc https://.',
       );
     }
     _baseUrlOverride = normalized;
@@ -61,7 +60,6 @@ class ContentApiClient {
     if (normalized == null) {
       throw const ContentApiException(
         code: 'invalid-url',
-        message: 'URL máy chủ không hợp lệ.',
       );
     }
     final data = await _getData('/api/source-status', baseUrl: normalized);
@@ -107,7 +105,6 @@ class ContentApiClient {
     if (root == null) {
       throw const ContentApiException(
         code: 'not-configured',
-        message: 'Chưa cấu hình máy chủ API phim.',
       );
     }
 
@@ -115,7 +112,6 @@ class ContentApiClient {
     if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
       throw const ContentApiException(
         code: 'invalid-url',
-        message: 'URL máy chủ API không hợp lệ.',
       );
     }
 
@@ -125,13 +121,11 @@ class ContentApiClient {
     } on TimeoutException catch (error) {
       throw ContentApiException(
         code: 'timeout',
-        message: 'Máy chủ phản hồi quá lâu. Vui lòng thử lại.',
         cause: error,
       );
     } on Object catch (error) {
       throw ContentApiException(
         code: 'network',
-        message: 'Không thể kết nối tới máy chủ phim.',
         cause: error,
       );
     }
@@ -146,7 +140,6 @@ class ContentApiClient {
     } on Object catch (error) {
       throw ContentApiException(
         code: 'malformed-json',
-        message: 'Máy chủ trả về dữ liệu không hợp lệ.',
         statusCode: response.statusCode,
         cause: error,
       );
@@ -158,12 +151,6 @@ class ContentApiClient {
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw ContentApiException(
         code: 'http-${response.statusCode}',
-        message: switch (response.statusCode) {
-          403 => 'Máy chủ từ chối yêu cầu này.',
-          404 => 'Không tìm thấy nội dung trên máy chủ.',
-          >= 500 => 'Máy chủ phim đang gặp sự cố. Vui lòng thử lại sau.',
-          _ => 'Máy chủ phim không thể xử lý yêu cầu.',
-        },
         statusCode: response.statusCode,
       );
     }
@@ -171,7 +158,7 @@ class ContentApiClient {
     if (body['success'] != true) {
       throw ContentApiException(
         code: 'api-error',
-        message: body['message']?.toString() ?? 'Máy chủ phim báo lỗi.',
+        message: body['message']?.toString(),
         statusCode: response.statusCode,
       );
     }
@@ -179,7 +166,6 @@ class ContentApiClient {
     if (data is! Map) {
       throw const ContentApiException(
         code: 'invalid-schema',
-        message: 'Máy chủ không trả về đúng cấu trúc dữ liệu.',
       );
     }
     return Map<String, dynamic>.from(data);

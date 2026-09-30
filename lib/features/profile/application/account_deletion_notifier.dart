@@ -22,7 +22,7 @@ class AccountDeletionNotifier extends Notifier<AccountDeletionState> {
   Future<bool> deleteAccount() async {
     final user = ref.read(firebaseAuthProvider).currentUser;
     if (user == null) {
-      state = const AccountDeletionState(error: 'Sign in again to continue.');
+      state = const AccountDeletionState(error: 'account-sign-in-required');
       return false;
     }
 
@@ -30,8 +30,7 @@ class AccountDeletionNotifier extends Notifier<AccountDeletionState> {
     if (lastSignIn == null ||
         DateTime.now().difference(lastSignIn) > _recentLoginWindow) {
       state = const AccountDeletionState(
-        error: 'For your security, sign out and sign in again before deleting '
-            'your account.',
+        error: 'account-recent-login-required',
       );
       return false;
     }
@@ -43,14 +42,13 @@ class AccountDeletionNotifier extends Notifier<AccountDeletionState> {
       state = const AccountDeletionState();
       return true;
     } on fb.FirebaseAuthException catch (error) {
-      final message = error.code == 'requires-recent-login'
-          ? 'For your security, sign out and sign in again before deleting '
-              'your account.'
-          : error.message ?? 'Account deletion failed. Please try again.';
-      state = AccountDeletionState(error: message);
+      final code = error.code == 'requires-recent-login'
+          ? 'account-recent-login-required'
+          : 'account-deletion-failed';
+      state = AccountDeletionState(error: code);
       return false;
     } catch (error) {
-      state = AccountDeletionState(error: error.toString());
+      state = const AccountDeletionState(error: 'account-deletion-failed');
       return false;
     }
   }

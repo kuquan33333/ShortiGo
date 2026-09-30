@@ -65,6 +65,7 @@ class EpisodePlayerNotifier
         seriesId: args.seriesId,
         episodeId: args.episodeId,
         storagePath: episode.videoUrl,
+        chapterIndex: episode.sourceChapterIndex,
       );
 
       final controller = BetterPlayerController(

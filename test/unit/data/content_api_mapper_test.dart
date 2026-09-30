@@ -40,6 +40,7 @@ void main() {
     expect(episode.id, 'chapter-7');
     expect(episode.seriesId, 'book-1');
     expect(episode.order, 8);
+    expect(episode.sourceChapterIndex, 7);
     expect(episode.videoUrl, 'remote://7');
     expect(episode.thumbnailUrl, 'https://img.example/episode.jpg');
     expect(episode.durationSec, 0);
@@ -47,6 +48,21 @@ void main() {
     expect(episode.sourceAvailable, isTrue);
     expect(episode.sourceLocked, isFalse);
     expect(episode.chapterName, 'Tập 8');
+  });
+
+  test('keeps source chapter index separate from display serial number', () {
+    final episode = ContentApiMapper.episode(
+      {
+        'chapterIndex': 17,
+        'serialNumber': 18,
+        'available': true,
+      },
+      seriesId: 'book-1',
+    );
+
+    expect(episode.order, 18);
+    expect(episode.sourceChapterIndex, 17);
+    expect(episode.videoUrl, 'remote://17');
   });
 
   test('keeps provider source access separate from ShortiGo VIP access', () {

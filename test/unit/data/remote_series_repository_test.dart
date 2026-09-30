@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shortigo/data/remote/content_api_client.dart';
+import 'package:shortigo/data/remote/content_api_mapper.dart';
 import 'package:shortigo/data/remote/content_api_models.dart';
 import 'package:shortigo/data/remote/remote_series_repository.dart';
 
@@ -58,6 +59,34 @@ void main() {
 
     expect((await repository.byId('remembered')).id, 'remembered');
     expect(requests, 1);
+  });
+
+  test('search result resolves after repository restart through detail API',
+      () async {
+    final detail = _book('search-restart');
+    final client = ContentApiClient(
+      defaultBaseUrl: 'https://example.com',
+      httpClient: MockClient((request) async {
+        if (request.url.path == '/api/search/query/1') {
+          return _ok({
+            'list': [detail]
+          });
+        }
+        expect(request.url.path, '/api/book/search-restart');
+        return _ok(detail);
+      }),
+    );
+    final firstRepository = RemoteSeriesRepository(client);
+    final searchData = await client.search('query');
+    final result =
+        searchData.map((item) => ContentApiMapper.series(item)).single;
+    firstRepository.remember(result);
+
+    final restartedRepository = RemoteSeriesRepository(client);
+    final resolved = await restartedRepository.byId(result.id);
+
+    expect(resolved.id, 'search-restart');
+    expect(resolved.title, 'Series search-restart');
   });
 
   test('old servers fall back to home after a detail 404', () async {

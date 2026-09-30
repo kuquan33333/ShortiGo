@@ -61,7 +61,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
               ),
               data: (state) => state.error != null
                   ? Text(
-                      state.error!,
+                      localizedFriendlyErrorFor(context, state.error!).message,
                       style: const TextStyle(color: Colors.redAccent),
                     )
                   : const SizedBox.shrink(),

@@ -75,11 +75,12 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
       final client = ref.read(contentApiClientProvider);
       // Saving always verifies the URL afresh. A previous successful test
       // must not make a later, changed URL look valid.
-      await client.checkConnection(baseUrl: _urlController.text);
+      final status = await client.checkConnection(baseUrl: _urlController.text);
       await client.saveBaseUrl(_urlController.text);
       _urlController.text = (await client.configuredBaseUrl) ?? '';
       _invalidateContent();
       if (mounted) {
+        setState(() => _status = status);
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(AppLocalizations.of(context)!.saved)),
         );

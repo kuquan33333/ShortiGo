@@ -20,7 +20,6 @@ class RemoteVideoSource implements VideoSource {
     if (index == null) {
       throw const ContentApiException(
         code: 'episode-index',
-        message: 'Không xác định được số tập để phát.',
       );
     }
 
@@ -32,7 +31,6 @@ class RemoteVideoSource implements VideoSource {
     } on FormatException catch (error) {
       throw ContentApiException(
         code: 'invalid-watch-response',
-        message: 'Máy chủ không trả về đường dẫn phát hợp lệ.',
         cause: error,
       );
     }

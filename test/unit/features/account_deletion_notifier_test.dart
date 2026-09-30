@@ -41,7 +41,7 @@ void main() {
     expect(deleted, isFalse);
     expect(
       container.read(accountDeletionNotifierProvider).error,
-      contains('sign out and sign in again'),
+      'account-recent-login-required',
     );
     verifyNever(() => repository.deletePersonalData(any()));
     verifyNever(user.delete);

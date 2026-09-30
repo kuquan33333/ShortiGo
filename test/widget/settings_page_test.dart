@@ -55,6 +55,7 @@ void main() {
 
     expect(requests, ['https://new.example.com/api/source-status']);
     expect(await client.configuredBaseUrl, 'https://new.example.com');
+    expect(find.text('Hoạt động'), findsWidgets);
   });
 
   testWidgets('save keeps the previous URL when source status fails',

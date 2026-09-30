@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../core/error/friendly_error.dart';
 import '../../../l10n/app_localizations.dart';
 
 class AccountActionsSection extends StatelessWidget {
@@ -50,7 +51,10 @@ class AccountActionsSection extends StatelessWidget {
           onTap: isDeleting ? null : () => _confirmDelete(context),
         ),
         if (error != null)
-          Text(error!, style: const TextStyle(color: AppColors.error)),
+          Text(
+            localizedFriendlyErrorFor(context, error!).message,
+            style: const TextStyle(color: AppColors.error),
+          ),
       ],
     );
   }

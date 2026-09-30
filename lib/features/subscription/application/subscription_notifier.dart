@@ -36,7 +36,7 @@ class SubscriptionNotifier extends AsyncNotifier<SubscriptionState> {
       state = AsyncData(
         SubscriptionState(
           offerings: state.value?.offerings ?? const [],
-          error: error.toString(),
+          error: 'subscription-purchase-failed',
         ),
       );
     }
@@ -66,7 +66,7 @@ class SubscriptionNotifier extends AsyncNotifier<SubscriptionState> {
       state = AsyncData(
         SubscriptionState(
           offerings: offerings,
-          error: error.toString(),
+          error: 'subscription-restore-failed',
         ),
       );
     }

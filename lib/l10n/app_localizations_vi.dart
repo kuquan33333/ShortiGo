@@ -149,6 +149,15 @@ class AppLocalizationsVi extends AppLocalizations {
   String get hot => 'Thịnh hành';
 
   @override
+  String get trending => 'Thịnh hành';
+
+  @override
+  String get dubbed => 'Lồng tiếng Việt';
+
+  @override
+  String get vietsub => 'Vietsub';
+
+  @override
   String get romance => 'Ngôn tình';
 
   @override
@@ -168,6 +177,9 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get recommended => 'Có thể bạn thích';
+
+  @override
+  String get rebirth => 'Tái sinh / Xuyên không';
 
   @override
   String get adventure => 'Phiêu lưu';
@@ -460,4 +472,68 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get genericContentApiError =>
       'Không thể tải nội dung lúc này. Vui lòng thử lại.';
+
+  @override
+  String get authInvalidEmail => 'Địa chỉ email không hợp lệ.';
+
+  @override
+  String get authInvalidCredential => 'Email hoặc mật khẩu không đúng.';
+
+  @override
+  String get authEmailInUse => 'Email này đã được đăng ký.';
+
+  @override
+  String get authWeakPassword => 'Mật khẩu quá yếu.';
+
+  @override
+  String get authTooManyRequests =>
+      'Bạn đã thử quá nhiều lần. Vui lòng thử lại sau.';
+
+  @override
+  String get authNetwork => 'Không thể kết nối tới dịch vụ tài khoản.';
+
+  @override
+  String get authUserDisabled => 'Tài khoản này đã bị vô hiệu hóa.';
+
+  @override
+  String get authUnavailable => 'Tính năng đăng nhập hiện chưa khả dụng.';
+
+  @override
+  String get authUnknown => 'Không thể đăng nhập lúc này. Vui lòng thử lại.';
+
+  @override
+  String get somethingWentWrong => 'Đã xảy ra lỗi';
+
+  @override
+  String get unexpectedError =>
+      'Ứng dụng gặp sự cố ngoài dự kiến. Vui lòng thử lại.';
+
+  @override
+  String get accountError => 'Lỗi tài khoản';
+
+  @override
+  String get subscriptionError => 'Lỗi đăng ký dịch vụ';
+
+  @override
+  String get subscriptionPurchaseFailed =>
+      'Không thể hoàn tất giao dịch mua. Vui lòng thử lại.';
+
+  @override
+  String get subscriptionRestoreFailed =>
+      'Không thể khôi phục giao dịch mua. Vui lòng thử lại.';
+
+  @override
+  String get subscriptionNotConfigured =>
+      'Gói dịch vụ hiện chưa được cấu hình.';
+
+  @override
+  String get accountSignInRequired => 'Vui lòng đăng nhập lại để tiếp tục.';
+
+  @override
+  String get accountRecentLoginRequired =>
+      'Vì lý do bảo mật, hãy đăng nhập lại trước khi xóa tài khoản.';
+
+  @override
+  String get accountDeletionFailed =>
+      'Không thể xóa tài khoản. Vui lòng thử lại.';
 }

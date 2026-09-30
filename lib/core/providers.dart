@@ -35,14 +35,14 @@ final firebaseAvailableProvider =
 
 final firestoreProvider = Provider<FirebaseFirestore>((_) {
   if (!FirebaseBootstrap.isAvailable) {
-    throw StateError('Dịch vụ tài khoản hiện chưa được cấu hình.');
+    throw StateError('account-service-unavailable');
   }
   return FirebaseFirestore.instance;
 });
 
 final firebaseAuthProvider = Provider<fb.FirebaseAuth>((_) {
   if (!FirebaseBootstrap.isAvailable) {
-    throw StateError('Dịch vụ tài khoản hiện chưa được cấu hình.');
+    throw StateError('account-service-unavailable');
   }
   return fb.FirebaseAuth.instance;
 });

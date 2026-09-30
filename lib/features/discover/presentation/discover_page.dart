@@ -11,6 +11,7 @@ import '../application/discover_notifier.dart';
 import '../application/discover_state.dart';
 import 'category_tabs.dart';
 import 'series_card.dart';
+import 'section_title_localizer.dart';
 
 class DiscoverPage extends ConsumerWidget {
   const DiscoverPage({super.key});
@@ -91,13 +92,14 @@ class DiscoverPage extends ConsumerWidget {
   }
 
   Widget _section(BuildContext context, DiscoverSection section) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
           child: Text(
-            section.title,
+            localizedSectionTitle(l10n, section.slug, section.title),
             style: Theme.of(context).textTheme.titleMedium,
           ),
         ),

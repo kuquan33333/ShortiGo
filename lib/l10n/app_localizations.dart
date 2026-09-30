@@ -368,6 +368,24 @@ abstract class AppLocalizations {
   /// **'Hot'**
   String get hot;
 
+  /// No description provided for @trending.
+  ///
+  /// In en, this message translates to:
+  /// **'Trending'**
+  String get trending;
+
+  /// No description provided for @dubbed.
+  ///
+  /// In en, this message translates to:
+  /// **'Vietnamese Dubbed'**
+  String get dubbed;
+
+  /// No description provided for @vietsub.
+  ///
+  /// In en, this message translates to:
+  /// **'Vietnamese Subtitles'**
+  String get vietsub;
+
   /// No description provided for @romance.
   ///
   /// In en, this message translates to:
@@ -409,6 +427,12 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Recommended'**
   String get recommended;
+
+  /// No description provided for @rebirth.
+  ///
+  /// In en, this message translates to:
+  /// **'Rebirth / Time Travel'**
+  String get rebirth;
 
   /// No description provided for @adventure.
   ///
@@ -961,6 +985,120 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Unable to load content right now. Please try again.'**
   String get genericContentApiError;
+
+  /// No description provided for @authInvalidEmail.
+  ///
+  /// In en, this message translates to:
+  /// **'Invalid email address.'**
+  String get authInvalidEmail;
+
+  /// No description provided for @authInvalidCredential.
+  ///
+  /// In en, this message translates to:
+  /// **'Email or password is incorrect.'**
+  String get authInvalidCredential;
+
+  /// No description provided for @authEmailInUse.
+  ///
+  /// In en, this message translates to:
+  /// **'This email is already registered.'**
+  String get authEmailInUse;
+
+  /// No description provided for @authWeakPassword.
+  ///
+  /// In en, this message translates to:
+  /// **'Password is too weak.'**
+  String get authWeakPassword;
+
+  /// No description provided for @authTooManyRequests.
+  ///
+  /// In en, this message translates to:
+  /// **'Too many attempts. Please try again later.'**
+  String get authTooManyRequests;
+
+  /// No description provided for @authNetwork.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to connect to the account service.'**
+  String get authNetwork;
+
+  /// No description provided for @authUserDisabled.
+  ///
+  /// In en, this message translates to:
+  /// **'This account has been disabled.'**
+  String get authUserDisabled;
+
+  /// No description provided for @authUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Account sign-in is not available right now.'**
+  String get authUnavailable;
+
+  /// No description provided for @authUnknown.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to sign in right now. Please try again.'**
+  String get authUnknown;
+
+  /// No description provided for @somethingWentWrong.
+  ///
+  /// In en, this message translates to:
+  /// **'Something went wrong'**
+  String get somethingWentWrong;
+
+  /// No description provided for @unexpectedError.
+  ///
+  /// In en, this message translates to:
+  /// **'The app encountered an unexpected problem. Please try again.'**
+  String get unexpectedError;
+
+  /// No description provided for @accountError.
+  ///
+  /// In en, this message translates to:
+  /// **'Account error'**
+  String get accountError;
+
+  /// No description provided for @subscriptionError.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscription error'**
+  String get subscriptionError;
+
+  /// No description provided for @subscriptionPurchaseFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'The purchase could not be completed. Please try again.'**
+  String get subscriptionPurchaseFailed;
+
+  /// No description provided for @subscriptionRestoreFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchases could not be restored. Please try again.'**
+  String get subscriptionRestoreFailed;
+
+  /// No description provided for @subscriptionNotConfigured.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscriptions are not configured right now.'**
+  String get subscriptionNotConfigured;
+
+  /// No description provided for @accountSignInRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in again to continue.'**
+  String get accountSignInRequired;
+
+  /// No description provided for @accountRecentLoginRequired.
+  ///
+  /// In en, this message translates to:
+  /// **'For your security, sign in again before deleting your account.'**
+  String get accountRecentLoginRequired;
+
+  /// No description provided for @accountDeletionFailed.
+  ///
+  /// In en, this message translates to:
+  /// **'Account deletion failed. Please try again.'**
+  String get accountDeletionFailed;
 }
 
 class _AppLocalizationsDelegate

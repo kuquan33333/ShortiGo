@@ -24,6 +24,7 @@ mixin _$Episode {
   bool get sourceAvailable;
   bool get sourceLocked;
   String? get chapterName;
+  int? get sourceChapterIndex;
   int? get bonusUnlockCost;
   int get watchCount;
   int get likeCount;
@@ -62,6 +63,8 @@ mixin _$Episode {
                 other.sourceLocked == sourceLocked) &&
             (identical(other.chapterName, chapterName) ||
                 other.chapterName == chapterName) &&
+            (identical(other.sourceChapterIndex, sourceChapterIndex) ||
+                other.sourceChapterIndex == sourceChapterIndex) &&
             (identical(other.bonusUnlockCost, bonusUnlockCost) ||
                 other.bonusUnlockCost == bonusUnlockCost) &&
             (identical(other.watchCount, watchCount) ||
@@ -86,6 +89,7 @@ mixin _$Episode {
       sourceAvailable,
       sourceLocked,
       chapterName,
+      sourceChapterIndex,
       bonusUnlockCost,
       watchCount,
       likeCount,
@@ -93,7 +97,7 @@ mixin _$Episode {
 
   @override
   String toString() {
-    return 'Episode(id: $id, seriesId: $seriesId, order: $order, videoUrl: $videoUrl, thumbnailUrl: $thumbnailUrl, durationSec: $durationSec, isVipLocked: $isVipLocked, sourceAvailable: $sourceAvailable, sourceLocked: $sourceLocked, chapterName: $chapterName, bonusUnlockCost: $bonusUnlockCost, watchCount: $watchCount, likeCount: $likeCount, shareCount: $shareCount)';
+    return 'Episode(id: $id, seriesId: $seriesId, order: $order, videoUrl: $videoUrl, thumbnailUrl: $thumbnailUrl, durationSec: $durationSec, isVipLocked: $isVipLocked, sourceAvailable: $sourceAvailable, sourceLocked: $sourceLocked, chapterName: $chapterName, sourceChapterIndex: $sourceChapterIndex, bonusUnlockCost: $bonusUnlockCost, watchCount: $watchCount, likeCount: $likeCount, shareCount: $shareCount)';
   }
 }
 
@@ -113,6 +117,7 @@ abstract mixin class $EpisodeCopyWith<$Res> {
       bool sourceAvailable,
       bool sourceLocked,
       String? chapterName,
+      int? sourceChapterIndex,
       int? bonusUnlockCost,
       int watchCount,
       int likeCount,
@@ -141,6 +146,7 @@ class _$EpisodeCopyWithImpl<$Res> implements $EpisodeCopyWith<$Res> {
     Object? sourceAvailable = null,
     Object? sourceLocked = null,
     Object? chapterName = freezed,
+    Object? sourceChapterIndex = freezed,
     Object? bonusUnlockCost = freezed,
     Object? watchCount = null,
     Object? likeCount = null,
@@ -187,6 +193,10 @@ class _$EpisodeCopyWithImpl<$Res> implements $EpisodeCopyWith<$Res> {
           ? _self.chapterName
           : chapterName // ignore: cast_nullable_to_non_nullable
               as String?,
+      sourceChapterIndex: freezed == sourceChapterIndex
+          ? _self.sourceChapterIndex
+          : sourceChapterIndex // ignore: cast_nullable_to_non_nullable
+              as int?,
       bonusUnlockCost: freezed == bonusUnlockCost
           ? _self.bonusUnlockCost
           : bonusUnlockCost // ignore: cast_nullable_to_non_nullable
@@ -311,6 +321,7 @@ extension EpisodePatterns on Episode {
             bool sourceAvailable,
             bool sourceLocked,
             String? chapterName,
+            int? sourceChapterIndex,
             int? bonusUnlockCost,
             int watchCount,
             int likeCount,
@@ -332,6 +343,7 @@ extension EpisodePatterns on Episode {
             _that.sourceAvailable,
             _that.sourceLocked,
             _that.chapterName,
+            _that.sourceChapterIndex,
             _that.bonusUnlockCost,
             _that.watchCount,
             _that.likeCount,
@@ -367,6 +379,7 @@ extension EpisodePatterns on Episode {
             bool sourceAvailable,
             bool sourceLocked,
             String? chapterName,
+            int? sourceChapterIndex,
             int? bonusUnlockCost,
             int watchCount,
             int likeCount,
@@ -387,6 +400,7 @@ extension EpisodePatterns on Episode {
             _that.sourceAvailable,
             _that.sourceLocked,
             _that.chapterName,
+            _that.sourceChapterIndex,
             _that.bonusUnlockCost,
             _that.watchCount,
             _that.likeCount,
@@ -421,6 +435,7 @@ extension EpisodePatterns on Episode {
             bool sourceAvailable,
             bool sourceLocked,
             String? chapterName,
+            int? sourceChapterIndex,
             int? bonusUnlockCost,
             int watchCount,
             int likeCount,
@@ -441,6 +456,7 @@ extension EpisodePatterns on Episode {
             _that.sourceAvailable,
             _that.sourceLocked,
             _that.chapterName,
+            _that.sourceChapterIndex,
             _that.bonusUnlockCost,
             _that.watchCount,
             _that.likeCount,
@@ -465,6 +481,7 @@ class _Episode implements Episode {
       this.sourceAvailable = true,
       this.sourceLocked = false,
       this.chapterName,
+      this.sourceChapterIndex,
       this.bonusUnlockCost,
       this.watchCount = 0,
       this.likeCount = 0,
@@ -495,6 +512,8 @@ class _Episode implements Episode {
   final bool sourceLocked;
   @override
   final String? chapterName;
+  @override
+  final int? sourceChapterIndex;
   @override
   final int? bonusUnlockCost;
   @override
@@ -545,6 +564,8 @@ class _Episode implements Episode {
                 other.sourceLocked == sourceLocked) &&
             (identical(other.chapterName, chapterName) ||
                 other.chapterName == chapterName) &&
+            (identical(other.sourceChapterIndex, sourceChapterIndex) ||
+                other.sourceChapterIndex == sourceChapterIndex) &&
             (identical(other.bonusUnlockCost, bonusUnlockCost) ||
                 other.bonusUnlockCost == bonusUnlockCost) &&
             (identical(other.watchCount, watchCount) ||
@@ -569,6 +590,7 @@ class _Episode implements Episode {
       sourceAvailable,
       sourceLocked,
       chapterName,
+      sourceChapterIndex,
       bonusUnlockCost,
       watchCount,
       likeCount,
@@ -576,7 +598,7 @@ class _Episode implements Episode {
 
   @override
   String toString() {
-    return 'Episode(id: $id, seriesId: $seriesId, order: $order, videoUrl: $videoUrl, thumbnailUrl: $thumbnailUrl, durationSec: $durationSec, isVipLocked: $isVipLocked, sourceAvailable: $sourceAvailable, sourceLocked: $sourceLocked, chapterName: $chapterName, bonusUnlockCost: $bonusUnlockCost, watchCount: $watchCount, likeCount: $likeCount, shareCount: $shareCount)';
+    return 'Episode(id: $id, seriesId: $seriesId, order: $order, videoUrl: $videoUrl, thumbnailUrl: $thumbnailUrl, durationSec: $durationSec, isVipLocked: $isVipLocked, sourceAvailable: $sourceAvailable, sourceLocked: $sourceLocked, chapterName: $chapterName, sourceChapterIndex: $sourceChapterIndex, bonusUnlockCost: $bonusUnlockCost, watchCount: $watchCount, likeCount: $likeCount, shareCount: $shareCount)';
   }
 }
 
@@ -597,6 +619,7 @@ abstract mixin class _$EpisodeCopyWith<$Res> implements $EpisodeCopyWith<$Res> {
       bool sourceAvailable,
       bool sourceLocked,
       String? chapterName,
+      int? sourceChapterIndex,
       int? bonusUnlockCost,
       int watchCount,
       int likeCount,
@@ -625,6 +648,7 @@ class __$EpisodeCopyWithImpl<$Res> implements _$EpisodeCopyWith<$Res> {
     Object? sourceAvailable = null,
     Object? sourceLocked = null,
     Object? chapterName = freezed,
+    Object? sourceChapterIndex = freezed,
     Object? bonusUnlockCost = freezed,
     Object? watchCount = null,
     Object? likeCount = null,
@@ -671,6 +695,10 @@ class __$EpisodeCopyWithImpl<$Res> implements _$EpisodeCopyWith<$Res> {
           ? _self.chapterName
           : chapterName // ignore: cast_nullable_to_non_nullable
               as String?,
+      sourceChapterIndex: freezed == sourceChapterIndex
+          ? _self.sourceChapterIndex
+          : sourceChapterIndex // ignore: cast_nullable_to_non_nullable
+              as int?,
       bonusUnlockCost: freezed == bonusUnlockCost
           ? _self.bonusUnlockCost
           : bonusUnlockCost // ignore: cast_nullable_to_non_nullable
