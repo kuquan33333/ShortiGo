@@ -132,7 +132,7 @@ class RemoteSeriesRepository implements SeriesRepository {
           .whereType<Map<String, dynamic>>()
           .expand((section) => section['list'] is List
               ? (section['list'] as List).whereType<Map<String, dynamic>>()
-              : const <Map>[])
+              : const <Map<String, dynamic>>[])
           .map((item) => Map<String, dynamic>.from(item))
           .toList();
     }
