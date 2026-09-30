@@ -54,7 +54,13 @@ void main() {
 
   test('purchase failure is returned as a localizable code', () async {
     final gateway = _MockIapGateway();
-    when(gateway.getOfferings).thenAnswer((_) async => []);
+    final offerings = [
+      IapOffering(
+        identifier: 'default',
+        packages: [IapPackage(identifier: 'monthly', priceString: '\$4.99')],
+      ),
+    ];
+    when(gateway.getOfferings).thenAnswer((_) async => offerings);
     when(() => gateway.purchase('monthly'))
         .thenThrow(StateError('store unavailable'));
     final container = ProviderContainer(
@@ -71,5 +77,61 @@ void main() {
       container.read(subscriptionNotifierProvider).requireValue.error,
       'subscription-purchase-failed',
     );
+    expect(
+      container.read(subscriptionNotifierProvider).requireValue.offerings,
+      same(offerings),
+    );
+  });
+
+  test('purchase false is returned as a localizable code and keeps offerings',
+      () async {
+    final gateway = _MockIapGateway();
+    final offerings = [
+      IapOffering(
+        identifier: 'default',
+        packages: [IapPackage(identifier: 'monthly', priceString: '\$4.99')],
+      ),
+    ];
+    when(gateway.getOfferings).thenAnswer((_) async => offerings);
+    when(() => gateway.purchase('monthly')).thenAnswer((_) async => false);
+    final container = ProviderContainer(
+      overrides: [iapGatewayProvider.overrideWithValue(gateway)],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(subscriptionNotifierProvider.future);
+    await container
+        .read(subscriptionNotifierProvider.notifier)
+        .purchase('monthly');
+
+    final state = container.read(subscriptionNotifierProvider).requireValue;
+    expect(state.error, 'subscription-purchase-failed');
+    expect(state.offerings, same(offerings));
+  });
+
+  test('successful purchase clears purchase error and keeps offerings',
+      () async {
+    final gateway = _MockIapGateway();
+    final offerings = [
+      IapOffering(
+        identifier: 'default',
+        packages: [IapPackage(identifier: 'monthly', priceString: '\$4.99')],
+      ),
+    ];
+    when(gateway.getOfferings).thenAnswer((_) async => offerings);
+    when(() => gateway.purchase('monthly')).thenAnswer((_) async => true);
+    final container = ProviderContainer(
+      overrides: [iapGatewayProvider.overrideWithValue(gateway)],
+    );
+    addTearDown(container.dispose);
+
+    await container.read(subscriptionNotifierProvider.future);
+    await container
+        .read(subscriptionNotifierProvider.notifier)
+        .purchase('monthly');
+
+    final state = container.read(subscriptionNotifierProvider).requireValue;
+    expect(state.error, isNull);
+    expect(state.offerings, same(offerings));
   });
 }

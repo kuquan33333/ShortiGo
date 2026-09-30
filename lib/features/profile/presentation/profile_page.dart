@@ -189,7 +189,12 @@ class ProfilePage extends ConsumerWidget {
                       ? l10n.subscriptionRestored
                       : result?.message == 'no-active-vip-purchase'
                           ? l10n.noActiveVipPurchase
-                          : result?.error;
+                          : result?.error != null
+                              ? localizedFriendlyErrorFor(
+                                  context,
+                                  result!.error!,
+                                ).message
+                              : null;
                   if (message != null) {
                     ScaffoldMessenger.of(context)
                         .showSnackBar(SnackBar(content: Text(message)));

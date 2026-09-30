@@ -27,15 +27,26 @@ class SubscriptionNotifier extends AsyncNotifier<SubscriptionState> {
   }
 
   Future<void> purchase(String packageId) async {
+    final offerings = state.value?.offerings ?? const <IapOffering>[];
     state = const AsyncLoading<SubscriptionState>().copyWithPrevious(state);
     try {
       final iap = ref.read(iapGatewayProvider);
-      await iap.purchase(packageId);
+      final purchased = await iap.purchase(packageId);
+      if (!purchased) {
+        state = AsyncData(
+          SubscriptionState(
+            offerings: offerings,
+            error: 'subscription-purchase-failed',
+          ),
+        );
+        return;
+      }
       ref.invalidate(profileNotifierProvider);
+      state = AsyncData(SubscriptionState(offerings: offerings));
     } catch (error) {
       state = AsyncData(
         SubscriptionState(
-          offerings: state.value?.offerings ?? const [],
+          offerings: offerings,
           error: 'subscription-purchase-failed',
         ),
       );
