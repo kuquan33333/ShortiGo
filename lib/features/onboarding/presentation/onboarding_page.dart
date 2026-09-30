@@ -32,7 +32,7 @@ class OnboardingPage extends ConsumerWidget {
       body: async.when(
         loading: () => const LoadingView(),
         error: (error, _) => ErrorView(
-          error: friendlyErrorFor(error),
+          error: localizedFriendlyErrorFor(context, error),
           onRetry: () => ref.invalidate(onboardingPreviewNotifierProvider),
         ),
         data: (state) => Column(

@@ -31,7 +31,7 @@ class ProfilePage extends ConsumerWidget {
       body: async.when(
         loading: () => const LoadingView(),
         error: (error, _) => ErrorView(
-          error: friendlyErrorFor(error),
+          error: localizedFriendlyErrorFor(context, error),
           onRetry: () => ref.invalidate(profileNotifierProvider),
         ),
         data: (state) {
@@ -142,9 +142,9 @@ class ProfilePage extends ConsumerWidget {
                           _iconFor(transaction.type),
                           color: AppColors.primary,
                         ),
-                        title: Text(transaction.friendlyTitle),
+                        title: Text(transaction.friendlyTitle(l10n)),
                         trailing: Text(
-                          transaction.walletDeltaLabel,
+                          transaction.walletDeltaLabel(l10n),
                           style: TextStyle(
                             color: transaction.bonusDelta < 0 ||
                                     transaction.coinsDelta < 0
@@ -185,7 +185,11 @@ class ProfilePage extends ConsumerWidget {
                   }
                   final result =
                       ref.read(subscriptionNotifierProvider).valueOrNull;
-                  final message = result?.message ?? result?.error;
+                  final message = result?.message == 'subscription-restored'
+                      ? l10n.subscriptionRestored
+                      : result?.message == 'no-active-vip-purchase'
+                          ? l10n.noActiveVipPurchase
+                          : result?.error;
                   if (message != null) {
                     ScaffoldMessenger.of(context)
                         .showSnackBar(SnackBar(content: Text(message)));

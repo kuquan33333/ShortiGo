@@ -8,6 +8,13 @@ import 'package:shortigo/features/subscription/application/subscription_notifier
 class _MockIapGateway extends Mock implements IapGateway {}
 
 void main() {
+  test('app uses one RevenueCat gateway instance through the provider', () {
+    final container = ProviderContainer();
+    addTearDown(container.dispose);
+
+    expect(container.read(iapGatewayProvider), same(revenueCatGateway));
+  });
+
   test('restore purchases reports restored VIP access', () async {
     final gateway = _MockIapGateway();
     when(gateway.getOfferings).thenAnswer((_) async => []);
@@ -23,7 +30,7 @@ void main() {
         .restorePurchases();
 
     final state = container.read(subscriptionNotifierProvider).requireValue;
-    expect(state.message, 'VIP purchases restored.');
+    expect(state.message, 'subscription-restored');
     verify(gateway.restorePurchases).called(1);
   });
 
@@ -42,6 +49,6 @@ void main() {
         .restorePurchases();
 
     final state = container.read(subscriptionNotifierProvider).requireValue;
-    expect(state.message, 'No active VIP purchase was found.');
+    expect(state.message, 'no-active-vip-purchase');
   });
 }

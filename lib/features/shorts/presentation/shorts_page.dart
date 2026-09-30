@@ -375,22 +375,37 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
   }
 
   Future<String> _urlFor(Episode episode) {
-    return _urlCache.putIfAbsent(
-      episode.id,
-      () => ref.read(videoSourceProvider).playableUrl(
-            seriesId: episode.seriesId,
-            episodeId: episode.id,
-            storagePath: episode.videoUrl,
-          ),
+    final cached = _urlCache[episode.id];
+    if (cached != null) return cached;
+
+    final future = ref.read(videoSourceProvider).playableUrl(
+          seriesId: episode.seriesId,
+          episodeId: episode.id,
+          storagePath: episode.videoUrl,
+          chapterIndex: episode.order - 1,
+        );
+    _urlCache[episode.id] = future;
+    unawaited(
+      future.then<void>(
+        (_) {},
+        onError: (Object _, StackTrace __) {
+          if (identical(_urlCache[episode.id], future)) {
+            _urlCache.remove(episode.id);
+          }
+        },
+      ),
     );
+    return future;
   }
 
   void _prefetchUrls(List<Episode> episodes) {
     final user = ref.read(currentAppUserDocProvider).value;
     for (final episode in episodes) {
       if (_keepIds.contains(episode.id) &&
+          episode.sourceAvailable &&
+          !episode.sourceLocked &&
           accessFor(episode, user) == EpisodeAccessState.open) {
-        unawaited(_urlFor(episode));
+        unawaited(_urlFor(episode).catchError((_) => ''));
       }
     }
   }

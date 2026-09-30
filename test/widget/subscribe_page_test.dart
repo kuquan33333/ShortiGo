@@ -5,6 +5,7 @@ import 'package:mocktail/mocktail.dart';
 import 'package:shortigo/core/providers.dart';
 import 'package:shortigo/domain/interfaces/iap_gateway.dart';
 import 'package:shortigo/features/subscription/presentation/subscribe_page.dart';
+import 'package:shortigo/l10n/app_localizations.dart';
 
 class _MockIapGateway extends Mock implements IapGateway {}
 
@@ -16,7 +17,11 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [iapGatewayProvider.overrideWithValue(gateway)],
-        child: const MaterialApp(home: SubscribePage()),
+        child: const MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: SubscribePage(),
+        ),
       ),
     );
     await tester.pumpAndSettle();

@@ -5,6 +5,7 @@ import '../../../core/error/friendly_error.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/loading_view.dart';
+import '../../../l10n/app_localizations.dart';
 import '../application/subscription_notifier.dart';
 
 class SubscribePage extends ConsumerWidget {
@@ -13,13 +14,14 @@ class SubscribePage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(subscriptionNotifierProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Subscribe to VIP')),
+      appBar: AppBar(title: Text(l10n.subscribeToVip)),
       body: async.when(
         loading: () => const LoadingView(),
         error: (error, _) => ErrorView(
-          error: friendlyErrorFor(error),
+          error: localizedFriendlyErrorFor(context, error),
           onRetry: () => ref.invalidate(subscriptionNotifierProvider),
         ),
         data: (state) {
@@ -34,11 +36,11 @@ class SubscribePage extends ConsumerWidget {
                   ),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: const Column(
+                child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'VIP Membership',
+                      l10n.vipMembership,
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 24,
@@ -47,7 +49,7 @@ class SubscribePage extends ConsumerWidget {
                     ),
                     SizedBox(height: 8),
                     Text(
-                      'Ad-free, 1080p, exclusive VIP series.',
+                      l10n.vipBenefits,
                       style: TextStyle(color: Colors.white70),
                     ),
                   ],
@@ -55,10 +57,10 @@ class SubscribePage extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               if (state.offerings.isEmpty)
-                const Padding(
+                Padding(
                   padding: EdgeInsets.all(16),
                   child: Text(
-                    'No offerings available right now.',
+                    l10n.noOfferingsAvailable,
                     style: TextStyle(color: AppColors.textSecondary),
                   ),
                 )
@@ -91,12 +93,12 @@ class SubscribePage extends ConsumerWidget {
                             .restorePurchases();
                       },
                 icon: const Icon(Icons.restore),
-                label: const Text('Restore purchases'),
+                label: Text(l10n.restorePurchases),
               ),
               if (state.message != null) ...[
                 const SizedBox(height: 12),
                 Text(
-                  state.message!,
+                  _messageFor(l10n, state.message!),
                   textAlign: TextAlign.center,
                   style: const TextStyle(color: AppColors.textSecondary),
                 ),
@@ -104,7 +106,7 @@ class SubscribePage extends ConsumerWidget {
               if (state.error != null) ...[
                 const SizedBox(height: 12),
                 Text(
-                  state.error!,
+                  localizedFriendlyErrorFor(context, state.error!).message,
                   style: const TextStyle(color: AppColors.error),
                 ),
               ],
@@ -113,5 +115,13 @@ class SubscribePage extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  String _messageFor(AppLocalizations l10n, String code) {
+    return switch (code) {
+      'subscription-restored' => l10n.subscriptionRestored,
+      'no-active-vip-purchase' => l10n.noActiveVipPurchase,
+      _ => code,
+    };
   }
 }

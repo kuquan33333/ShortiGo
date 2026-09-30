@@ -54,10 +54,24 @@ class SeriesDetailPage extends ConsumerWidget {
                     background: Stack(
                       fit: StackFit.expand,
                       children: [
-                        CachedNetworkImage(
-                          imageUrl: series.coverUrl,
-                          fit: BoxFit.cover,
-                        ),
+                        if (series.coverUrl.isNotEmpty)
+                          CachedNetworkImage(
+                            imageUrl: series.coverUrl,
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => const ColoredBox(
+                              color: AppColors.surface,
+                              child: Center(child: Icon(Icons.movie_outlined)),
+                            ),
+                            errorWidget: (_, __, ___) => const ColoredBox(
+                              color: AppColors.surface,
+                              child: Center(child: Icon(Icons.movie_outlined)),
+                            ),
+                          )
+                        else
+                          const ColoredBox(
+                            color: AppColors.surface,
+                            child: Center(child: Icon(Icons.movie_outlined)),
+                          ),
                         const DecoratedBox(
                           decoration: BoxDecoration(
                             gradient: LinearGradient(
@@ -108,13 +122,32 @@ class SeriesDetailPage extends ConsumerWidget {
                         height: 64,
                         child: ClipRRect(
                           borderRadius: BorderRadius.circular(8),
-                          child: CachedNetworkImage(
-                            imageUrl: episode.thumbnailUrl,
-                            fit: BoxFit.cover,
-                          ),
+                          child: episode.thumbnailUrl.isEmpty
+                              ? const ColoredBox(
+                                  color: AppColors.surface,
+                                  child: Icon(Icons.movie_outlined),
+                                )
+                              : CachedNetworkImage(
+                                  imageUrl: episode.thumbnailUrl,
+                                  fit: BoxFit.cover,
+                                  placeholder: (_, __) => const ColoredBox(
+                                    color: AppColors.surface,
+                                    child: Center(
+                                      child: Icon(Icons.movie_outlined),
+                                    ),
+                                  ),
+                                  errorWidget: (_, __, ___) => const ColoredBox(
+                                    color: AppColors.surface,
+                                    child: Icon(Icons.movie_outlined),
+                                  ),
+                                ),
                         ),
                       ),
-                      title: Text('EP.${episode.order}'),
+                      title: Text(
+                        episode.chapterName?.trim().isNotEmpty == true
+                            ? episode.chapterName!.trim()
+                            : 'EP.${episode.order}',
+                      ),
                       subtitle: episode.durationSec > 0
                           ? Text(l10n.durationSeconds(episode.durationSec))
                           : null,
@@ -138,10 +171,24 @@ class SeriesDetailPage extends ConsumerWidget {
                           ),
                         EpisodeAccessState.open =>
                           const Icon(Icons.play_circle_outline),
+                        EpisodeAccessState.sourceLocked => Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.lock_outline),
+                              const SizedBox(width: 4),
+                              Text(l10n.sourceLockedShort),
+                            ],
+                          ),
+                        EpisodeAccessState.sourceUnavailable =>
+                          const Icon(Icons.warning_amber_rounded),
                       },
                       onTap: () {
-                        if (accessFor(episode, user) ==
-                            EpisodeAccessState.vipRequired) {
+                        final access = accessFor(episode, user);
+                        if (access == EpisodeAccessState.sourceLocked ||
+                            access == EpisodeAccessState.sourceUnavailable) {
+                          return;
+                        }
+                        if (access == EpisodeAccessState.vipRequired) {
                           context.push('/subscribe');
                           return;
                         }
@@ -164,9 +211,16 @@ String _categoryLabel(AppLocalizations l10n, Category category) {
     Category.forYou => l10n.forYou,
     Category.newReleases => l10n.newUpdates,
     Category.hot => l10n.hot,
-    Category.adventure => l10n.adventure,
-    Category.scary => l10n.scary,
-    Category.anime => l10n.anime,
+    Category.romance => l10n.romance,
+    Category.ceo => l10n.ceo,
+    Category.revenge => l10n.revenge,
+    Category.family => l10n.family,
+    Category.action => l10n.action,
+    Category.fantasy => l10n.fantasy,
+    Category.recommended => l10n.recommended,
+    Category.adventure => l10n.action,
+    Category.scary => l10n.fantasy,
+    Category.anime => l10n.recommended,
     Category.vip => l10n.vip,
   };
 }

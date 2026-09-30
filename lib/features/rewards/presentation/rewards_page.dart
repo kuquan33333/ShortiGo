@@ -69,7 +69,7 @@ class RewardsPage extends ConsumerWidget {
               if (state.error != null) ...[
                 const SizedBox(height: 12),
                 Text(
-                  state.error!,
+                  _errorText(context, state.error!),
                   style: const TextStyle(color: AppColors.error),
                 ),
               ],
@@ -78,6 +78,15 @@ class RewardsPage extends ConsumerWidget {
         },
       ),
     );
+  }
+
+  String _errorText(BuildContext context, String code) {
+    final l10n = AppLocalizations.of(context)!;
+    return switch (code) {
+      'sign-in-required' => l10n.signInToUse,
+      'already-claimed' => l10n.claimedToday,
+      _ => localizedFriendlyErrorFor(context, code).message,
+    };
   }
 
   static bool _claimedToday(DateTime? lastClaim) {

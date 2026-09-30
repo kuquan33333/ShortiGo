@@ -85,7 +85,7 @@ class RewardsNotifier extends AsyncNotifier<RewardsState> {
       state = AsyncData(
         (current ?? const RewardsState()).copyWith(
           user: user,
-          error: 'Sign in required.',
+          error: 'sign-in-required',
         ),
       );
       return;
@@ -96,7 +96,7 @@ class RewardsNotifier extends AsyncNotifier<RewardsState> {
     if (last != null && now.difference(last) < _dailyCooldown) {
       state = AsyncData(
         (current ?? RewardsState(user: user)).copyWith(
-          error: 'Already claimed today. Come back later.',
+          error: 'already-claimed',
         ),
       );
       return;
@@ -126,7 +126,7 @@ class RewardsNotifier extends AsyncNotifier<RewardsState> {
     if (auth == null) {
       state = AsyncData(
         (current ?? const RewardsState()).copyWith(
-          error: 'Sign in required.',
+          error: 'sign-in-required',
         ),
       );
       return;

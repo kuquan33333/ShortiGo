@@ -51,7 +51,9 @@ class ContentApiClient {
   }
 
   void invalidate() {
-    _baseUrlOverride = null;
+    // The override is the active, already-normalized configuration. Clearing
+    // it here would immediately revert a newly saved URL when no database is
+    // available (and would make invalidation itself change app settings).
   }
 
   Future<ContentApiSourceStatus> checkConnection({String? baseUrl}) async {
@@ -73,6 +75,10 @@ class ContentApiClient {
       '/api/search/${Uri.encodeComponent(keyword)}/1',
     );
     return _listFrom(data, 'list');
+  }
+
+  Future<Map<String, dynamic>> getBook(String bookId) {
+    return _getData('/api/book/${Uri.encodeComponent(bookId)}');
   }
 
   Future<List<String>> suggest(String keyword) async {

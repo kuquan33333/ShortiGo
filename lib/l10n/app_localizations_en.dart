@@ -122,6 +122,20 @@ class AppLocalizationsEn extends AppLocalizations {
       'This episode does not have a public playback source yet.';
 
   @override
+  String get sourceLockedShort => 'Locked';
+
+  @override
+  String get sourceLockedDescription =>
+      'A public playback source is not available for this episode yet.';
+
+  @override
+  String get sourceUnavailable => 'Source unavailable';
+
+  @override
+  String get sourceUnavailableDescription =>
+      'This episode cannot be played from a public source right now.';
+
+  @override
   String episodeCount(Object count) {
     return '$count episodes';
   }
@@ -134,6 +148,27 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get hot => 'Hot';
+
+  @override
+  String get romance => 'Romance';
+
+  @override
+  String get ceo => 'CEO';
+
+  @override
+  String get revenge => 'Revenge';
+
+  @override
+  String get family => 'Family';
+
+  @override
+  String get action => 'Action';
+
+  @override
+  String get fantasy => 'Fantasy';
+
+  @override
+  String get recommended => 'Recommended';
 
   @override
   String get adventure => 'Adventure';
@@ -159,7 +194,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get accountAndSubscription => 'Account & Subscription';
 
   @override
+  String get subscribeToVip => 'Subscribe to VIP';
+
+  @override
+  String get vipMembership => 'VIP Membership';
+
+  @override
+  String get vipBenefits => 'Ad-free, 1080p, and exclusive VIP content.';
+
+  @override
+  String get noOfferingsAvailable =>
+      'No VIP offerings are available right now.';
+
+  @override
   String get restorePurchases => 'Restore purchases';
+
+  @override
+  String get subscriptionRestored => 'VIP purchases restored.';
+
+  @override
+  String get noActiveVipPurchase => 'No active VIP purchase was found.';
 
   @override
   String get deleteAccount => 'Delete account';
@@ -335,7 +389,7 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get browseCategoriesReady =>
-      'Browse categories, then sign in when you are ready to watch.';
+      'Explore short dramas even before you sign in.';
 
   @override
   String get noPreviewsYet => 'No previews yet';
@@ -357,4 +411,56 @@ class AppLocalizationsEn extends AppLocalizations {
 
   @override
   String get inspector => 'Inspector';
+
+  @override
+  String get signInToSyncAccount =>
+      'Sign in when you want to sync your list, rewards, and account.';
+
+  @override
+  String watchOnShortiGo(Object episode, Object title) {
+    return 'Watch $title on ShortiGo · Episode $episode';
+  }
+
+  @override
+  String get rewardedAdTransaction => 'Rewarded ad';
+
+  @override
+  String get purchaseTransaction => 'Purchase';
+
+  @override
+  String get episodeUnlockedTransaction => 'Episode unlocked';
+
+  @override
+  String get refundTransaction => 'Refund';
+
+  @override
+  String get invalidUrlError => 'The server URL is invalid.';
+
+  @override
+  String get notConfiguredError => 'The content API server is not configured.';
+
+  @override
+  String get timeoutError =>
+      'The server took too long to respond. Please try again.';
+
+  @override
+  String get networkError => 'Unable to connect to the content server.';
+
+  @override
+  String get malformedJsonError => 'The server returned invalid data.';
+
+  @override
+  String get invalidSchemaError =>
+      'The server returned an invalid data structure.';
+
+  @override
+  String get notFoundError => 'The content was not found on the server.';
+
+  @override
+  String get sourceLockedError =>
+      'This episode does not have a public playback source yet.';
+
+  @override
+  String get genericContentApiError =>
+      'Unable to load content right now. Please try again.';
 }

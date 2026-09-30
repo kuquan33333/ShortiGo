@@ -129,9 +129,9 @@ final rewardGatewayProvider = Provider<RewardGateway>((ref) {
   );
 });
 
-final iapGatewayProvider = Provider<IapGateway>((_) {
-  return RevenueCatIapGateway();
-});
+final revenueCatGateway = RevenueCatIapGateway();
+
+final iapGatewayProvider = Provider<IapGateway>((_) => revenueCatGateway);
 
 // === Future providers (added in their respective milestones) ===
 // M6: adminConfigGatewayProvider

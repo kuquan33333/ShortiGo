@@ -3,11 +3,13 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/error/friendly_error.dart';
 import '../../../core/providers.dart';
 import '../../../data/remote/content_api_models.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../discover/application/discover_notifier.dart';
 import '../../my_list/application/my_list_notifier.dart';
+import '../../series_detail/application/series_detail_notifier.dart';
 import '../../shorts/application/shorts_feed_notifier.dart';
 
 class SettingsPage extends ConsumerStatefulWidget {
@@ -71,6 +73,9 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     });
     try {
       final client = ref.read(contentApiClientProvider);
+      // Saving always verifies the URL afresh. A previous successful test
+      // must not make a later, changed URL look valid.
+      await client.checkConnection(baseUrl: _urlController.text);
       await client.saveBaseUrl(_urlController.text);
       _urlController.text = (await client.configuredBaseUrl) ?? '';
       _invalidateContent();
@@ -96,16 +101,18 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   void _invalidateContent() {
     ref.read(contentApiClientProvider).invalidate();
+    ref.invalidate(contentApiClientProvider);
     ref.invalidate(seriesRepositoryProvider);
     ref.invalidate(episodeRepositoryProvider);
+    ref.invalidate(videoSourceProvider);
     ref.invalidate(discoverNotifierProvider);
     ref.invalidate(shortsFeedNotifierProvider);
     ref.invalidate(myListNotifierProvider);
+    ref.invalidate(seriesDetailNotifierProvider);
   }
 
   String _messageFor(Object error) {
-    if (error is ContentApiException) return error.message;
-    return error.toString();
+    return localizedFriendlyErrorFor(context, error).message;
   }
 
   @override

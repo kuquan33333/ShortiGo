@@ -121,6 +121,20 @@ class AppLocalizationsVi extends AppLocalizations {
   String get sourceLocked => 'Tập này hiện chưa có nguồn phát công khai.';
 
   @override
+  String get sourceLockedShort => 'Bị khóa';
+
+  @override
+  String get sourceLockedDescription =>
+      'Nguồn phát công khai chưa được cung cấp cho tập này.';
+
+  @override
+  String get sourceUnavailable => 'Nguồn phát không khả dụng';
+
+  @override
+  String get sourceUnavailableDescription =>
+      'Tập này hiện chưa thể phát từ nguồn công khai.';
+
+  @override
   String episodeCount(Object count) {
     return '$count tập';
   }
@@ -133,6 +147,27 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get hot => 'Thịnh hành';
+
+  @override
+  String get romance => 'Ngôn tình';
+
+  @override
+  String get ceo => 'Tổng tài';
+
+  @override
+  String get revenge => 'Báo thù';
+
+  @override
+  String get family => 'Gia đình';
+
+  @override
+  String get action => 'Hành động';
+
+  @override
+  String get fantasy => 'Huyền huyễn';
+
+  @override
+  String get recommended => 'Có thể bạn thích';
 
   @override
   String get adventure => 'Phiêu lưu';
@@ -158,7 +193,27 @@ class AppLocalizationsVi extends AppLocalizations {
   String get accountAndSubscription => 'Tài khoản và gói dịch vụ';
 
   @override
+  String get subscribeToVip => 'Đăng ký VIP';
+
+  @override
+  String get vipMembership => 'Thành viên VIP';
+
+  @override
+  String get vipBenefits =>
+      'Không quảng cáo, chất lượng 1080p và nội dung VIP độc quyền.';
+
+  @override
+  String get noOfferingsAvailable => 'Hiện chưa có gói VIP khả dụng.';
+
+  @override
   String get restorePurchases => 'Khôi phục giao dịch mua';
+
+  @override
+  String get subscriptionRestored => 'Đã khôi phục giao dịch mua VIP.';
+
+  @override
+  String get noActiveVipPurchase =>
+      'Không tìm thấy giao dịch VIP đang hoạt động.';
 
   @override
   String get deleteAccount => 'Xóa tài khoản';
@@ -332,7 +387,7 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get browseCategoriesReady =>
-      'Khám phá danh mục, rồi đăng nhập khi bạn sẵn sàng xem.';
+      'Khám phá phim ngắn ngay cả khi chưa đăng nhập.';
 
   @override
   String get noPreviewsYet => 'Chưa có nội dung xem trước';
@@ -355,4 +410,54 @@ class AppLocalizationsVi extends AppLocalizations {
 
   @override
   String get inspector => 'Trình kiểm tra';
+
+  @override
+  String get signInToSyncAccount =>
+      'Đăng nhập khi bạn muốn đồng bộ danh sách, phần thưởng và tài khoản.';
+
+  @override
+  String watchOnShortiGo(Object episode, Object title) {
+    return 'Xem $title trên ShortiGo · Tập $episode';
+  }
+
+  @override
+  String get rewardedAdTransaction => 'Thưởng xem quảng cáo';
+
+  @override
+  String get purchaseTransaction => 'Mua hàng';
+
+  @override
+  String get episodeUnlockedTransaction => 'Mở khóa tập';
+
+  @override
+  String get refundTransaction => 'Hoàn tiền';
+
+  @override
+  String get invalidUrlError => 'URL máy chủ không hợp lệ.';
+
+  @override
+  String get notConfiguredError => 'Chưa cấu hình máy chủ API phim.';
+
+  @override
+  String get timeoutError => 'Máy chủ phản hồi quá lâu. Vui lòng thử lại.';
+
+  @override
+  String get networkError => 'Không thể kết nối tới máy chủ phim.';
+
+  @override
+  String get malformedJsonError => 'Máy chủ trả về dữ liệu không hợp lệ.';
+
+  @override
+  String get invalidSchemaError =>
+      'Máy chủ không trả về đúng cấu trúc dữ liệu.';
+
+  @override
+  String get notFoundError => 'Không tìm thấy nội dung trên máy chủ.';
+
+  @override
+  String get sourceLockedError => 'Tập này hiện chưa có nguồn phát công khai.';
+
+  @override
+  String get genericContentApiError =>
+      'Không thể tải nội dung lúc này. Vui lòng thử lại.';
 }

@@ -1,9 +1,21 @@
 import '../../../domain/entities/episode.dart';
 import '../../../domain/entities/user.dart';
 
-enum EpisodeAccessState { open, vipRequired, bonusRequired }
+enum EpisodeAccessState {
+  open,
+  vipRequired,
+  bonusRequired,
+  sourceLocked,
+  sourceUnavailable,
+}
 
 EpisodeAccessState accessFor(Episode episode, AppUser? user) {
+  if (episode.sourceLocked) {
+    return EpisodeAccessState.sourceLocked;
+  }
+  if (!episode.sourceAvailable) {
+    return EpisodeAccessState.sourceUnavailable;
+  }
   if (episode.isVipLocked && !(user?.isVip ?? false)) {
     return EpisodeAccessState.vipRequired;
   }

@@ -37,10 +37,21 @@
   "signOut": "Sign out",
   "tryAgain": "Try again",
   "sourceLocked": "This episode does not have a public playback source yet.",
+  "sourceLockedShort": "Locked",
+  "sourceLockedDescription": "A public playback source is not available for this episode yet.",
+  "sourceUnavailable": "Source unavailable",
+  "sourceUnavailableDescription": "This episode cannot be played from a public source right now.",
   "episodeCount": "{count} episodes",
   "forYou": "For You",
   "newUpdates": "New",
   "hot": "Hot",
+  "romance": "Romance",
+  "ceo": "CEO",
+  "revenge": "Revenge",
+  "family": "Family",
+  "action": "Action",
+  "fantasy": "Fantasy",
+  "recommended": "Recommended",
   "adventure": "Adventure",
   "scary": "Scary",
   "anime": "Anime",
@@ -48,7 +59,13 @@
   "durationSeconds": "{seconds}s",
   "unknownDuration": "",
   "accountAndSubscription": "Account & Subscription",
+  "subscribeToVip": "Subscribe to VIP",
+  "vipMembership": "VIP Membership",
+  "vipBenefits": "Ad-free, 1080p, and exclusive VIP content.",
+  "noOfferingsAvailable": "No VIP offerings are available right now.",
   "restorePurchases": "Restore purchases",
+  "subscriptionRestored": "VIP purchases restored.",
+  "noActiveVipPurchase": "No active VIP purchase was found.",
   "deleteAccount": "Delete account",
   "bonus": "Bonus",
   "coins": "Coins",
@@ -104,7 +121,7 @@
   ,"tapToRetry": "Tap to retry"
   ,"previewShortiGo": "Preview ShortiGo"
   ,"shortDramasBeforeSignup": "Short dramas before you sign up"
-  ,"browseCategoriesReady": "Browse categories, then sign in when you are ready to watch."
+  ,"browseCategoriesReady": "Explore short dramas even before you sign in."
   ,"noPreviewsYet": "No previews yet"
   ,"checkBackFreshDramas": "Check back soon for fresh short dramas."
   ,"vipEpisodeOpen": "Every VIP episode is open"
@@ -112,4 +129,19 @@
   ,"adDiagnostics": "Ad diagnostics"
   ,"testMode": "test mode"
   ,"inspector": "Inspector"
+  ,"signInToSyncAccount": "Sign in when you want to sync your list, rewards, and account."
+  ,"watchOnShortiGo": "Watch {title} on ShortiGo · Episode {episode}"
+  ,"rewardedAdTransaction": "Rewarded ad"
+  ,"purchaseTransaction": "Purchase"
+  ,"episodeUnlockedTransaction": "Episode unlocked"
+  ,"refundTransaction": "Refund"
+  ,"invalidUrlError": "The server URL is invalid."
+  ,"notConfiguredError": "The content API server is not configured."
+  ,"timeoutError": "The server took too long to respond. Please try again."
+  ,"networkError": "Unable to connect to the content server."
+  ,"malformedJsonError": "The server returned invalid data."
+  ,"invalidSchemaError": "The server returned an invalid data structure."
+  ,"notFoundError": "The content was not found on the server."
+  ,"sourceLockedError": "This episode does not have a public playback source yet."
+  ,"genericContentApiError": "Unable to load content right now. Please try again."
 }

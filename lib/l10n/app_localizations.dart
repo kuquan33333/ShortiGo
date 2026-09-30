@@ -320,6 +320,30 @@ abstract class AppLocalizations {
   /// **'This episode does not have a public playback source yet.'**
   String get sourceLocked;
 
+  /// No description provided for @sourceLockedShort.
+  ///
+  /// In en, this message translates to:
+  /// **'Locked'**
+  String get sourceLockedShort;
+
+  /// No description provided for @sourceLockedDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'A public playback source is not available for this episode yet.'**
+  String get sourceLockedDescription;
+
+  /// No description provided for @sourceUnavailable.
+  ///
+  /// In en, this message translates to:
+  /// **'Source unavailable'**
+  String get sourceUnavailable;
+
+  /// No description provided for @sourceUnavailableDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'This episode cannot be played from a public source right now.'**
+  String get sourceUnavailableDescription;
+
   /// No description provided for @episodeCount.
   ///
   /// In en, this message translates to:
@@ -343,6 +367,48 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Hot'**
   String get hot;
+
+  /// No description provided for @romance.
+  ///
+  /// In en, this message translates to:
+  /// **'Romance'**
+  String get romance;
+
+  /// No description provided for @ceo.
+  ///
+  /// In en, this message translates to:
+  /// **'CEO'**
+  String get ceo;
+
+  /// No description provided for @revenge.
+  ///
+  /// In en, this message translates to:
+  /// **'Revenge'**
+  String get revenge;
+
+  /// No description provided for @family.
+  ///
+  /// In en, this message translates to:
+  /// **'Family'**
+  String get family;
+
+  /// No description provided for @action.
+  ///
+  /// In en, this message translates to:
+  /// **'Action'**
+  String get action;
+
+  /// No description provided for @fantasy.
+  ///
+  /// In en, this message translates to:
+  /// **'Fantasy'**
+  String get fantasy;
+
+  /// No description provided for @recommended.
+  ///
+  /// In en, this message translates to:
+  /// **'Recommended'**
+  String get recommended;
 
   /// No description provided for @adventure.
   ///
@@ -386,11 +452,47 @@ abstract class AppLocalizations {
   /// **'Account & Subscription'**
   String get accountAndSubscription;
 
+  /// No description provided for @subscribeToVip.
+  ///
+  /// In en, this message translates to:
+  /// **'Subscribe to VIP'**
+  String get subscribeToVip;
+
+  /// No description provided for @vipMembership.
+  ///
+  /// In en, this message translates to:
+  /// **'VIP Membership'**
+  String get vipMembership;
+
+  /// No description provided for @vipBenefits.
+  ///
+  /// In en, this message translates to:
+  /// **'Ad-free, 1080p, and exclusive VIP content.'**
+  String get vipBenefits;
+
+  /// No description provided for @noOfferingsAvailable.
+  ///
+  /// In en, this message translates to:
+  /// **'No VIP offerings are available right now.'**
+  String get noOfferingsAvailable;
+
   /// No description provided for @restorePurchases.
   ///
   /// In en, this message translates to:
   /// **'Restore purchases'**
   String get restorePurchases;
+
+  /// No description provided for @subscriptionRestored.
+  ///
+  /// In en, this message translates to:
+  /// **'VIP purchases restored.'**
+  String get subscriptionRestored;
+
+  /// No description provided for @noActiveVipPurchase.
+  ///
+  /// In en, this message translates to:
+  /// **'No active VIP purchase was found.'**
+  String get noActiveVipPurchase;
 
   /// No description provided for @deleteAccount.
   ///
@@ -725,7 +827,7 @@ abstract class AppLocalizations {
   /// No description provided for @browseCategoriesReady.
   ///
   /// In en, this message translates to:
-  /// **'Browse categories, then sign in when you are ready to watch.'**
+  /// **'Explore short dramas even before you sign in.'**
   String get browseCategoriesReady;
 
   /// No description provided for @noPreviewsYet.
@@ -769,6 +871,96 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Inspector'**
   String get inspector;
+
+  /// No description provided for @signInToSyncAccount.
+  ///
+  /// In en, this message translates to:
+  /// **'Sign in when you want to sync your list, rewards, and account.'**
+  String get signInToSyncAccount;
+
+  /// No description provided for @watchOnShortiGo.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch {title} on ShortiGo · Episode {episode}'**
+  String watchOnShortiGo(Object episode, Object title);
+
+  /// No description provided for @rewardedAdTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Rewarded ad'**
+  String get rewardedAdTransaction;
+
+  /// No description provided for @purchaseTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Purchase'**
+  String get purchaseTransaction;
+
+  /// No description provided for @episodeUnlockedTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Episode unlocked'**
+  String get episodeUnlockedTransaction;
+
+  /// No description provided for @refundTransaction.
+  ///
+  /// In en, this message translates to:
+  /// **'Refund'**
+  String get refundTransaction;
+
+  /// No description provided for @invalidUrlError.
+  ///
+  /// In en, this message translates to:
+  /// **'The server URL is invalid.'**
+  String get invalidUrlError;
+
+  /// No description provided for @notConfiguredError.
+  ///
+  /// In en, this message translates to:
+  /// **'The content API server is not configured.'**
+  String get notConfiguredError;
+
+  /// No description provided for @timeoutError.
+  ///
+  /// In en, this message translates to:
+  /// **'The server took too long to respond. Please try again.'**
+  String get timeoutError;
+
+  /// No description provided for @networkError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to connect to the content server.'**
+  String get networkError;
+
+  /// No description provided for @malformedJsonError.
+  ///
+  /// In en, this message translates to:
+  /// **'The server returned invalid data.'**
+  String get malformedJsonError;
+
+  /// No description provided for @invalidSchemaError.
+  ///
+  /// In en, this message translates to:
+  /// **'The server returned an invalid data structure.'**
+  String get invalidSchemaError;
+
+  /// No description provided for @notFoundError.
+  ///
+  /// In en, this message translates to:
+  /// **'The content was not found on the server.'**
+  String get notFoundError;
+
+  /// No description provided for @sourceLockedError.
+  ///
+  /// In en, this message translates to:
+  /// **'This episode does not have a public playback source yet.'**
+  String get sourceLockedError;
+
+  /// No description provided for @genericContentApiError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to load content right now. Please try again.'**
+  String get genericContentApiError;
 }
 
 class _AppLocalizationsDelegate

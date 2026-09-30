@@ -37,10 +37,21 @@
   "signOut": "Đăng xuất",
   "tryAgain": "Thử lại",
   "sourceLocked": "Tập này hiện chưa có nguồn phát công khai.",
+  "sourceLockedShort": "Bị khóa",
+  "sourceLockedDescription": "Nguồn phát công khai chưa được cung cấp cho tập này.",
+  "sourceUnavailable": "Nguồn phát không khả dụng",
+  "sourceUnavailableDescription": "Tập này hiện chưa thể phát từ nguồn công khai.",
   "episodeCount": "{count} tập",
   "forYou": "Dành cho bạn",
   "newUpdates": "Mới cập nhật",
   "hot": "Thịnh hành",
+  "romance": "Ngôn tình",
+  "ceo": "Tổng tài",
+  "revenge": "Báo thù",
+  "family": "Gia đình",
+  "action": "Hành động",
+  "fantasy": "Huyền huyễn",
+  "recommended": "Có thể bạn thích",
   "adventure": "Phiêu lưu",
   "scary": "Kinh dị",
   "anime": "Hoạt hình",
@@ -48,7 +59,13 @@
   "durationSeconds": "{seconds} giây",
   "unknownDuration": "",
   "accountAndSubscription": "Tài khoản và gói dịch vụ",
+  "subscribeToVip": "Đăng ký VIP",
+  "vipMembership": "Thành viên VIP",
+  "vipBenefits": "Không quảng cáo, chất lượng 1080p và nội dung VIP độc quyền.",
+  "noOfferingsAvailable": "Hiện chưa có gói VIP khả dụng.",
   "restorePurchases": "Khôi phục giao dịch mua",
+  "subscriptionRestored": "Đã khôi phục giao dịch mua VIP.",
+  "noActiveVipPurchase": "Không tìm thấy giao dịch VIP đang hoạt động.",
   "deleteAccount": "Xóa tài khoản",
   "bonus": "Điểm thưởng",
   "coins": "Xu",
@@ -104,7 +121,7 @@
   ,"tapToRetry": "Chạm để thử lại"
   ,"previewShortiGo": "Xem trước ShortiGo"
   ,"shortDramasBeforeSignup": "Xem drama ngắn trước khi đăng ký"
-  ,"browseCategoriesReady": "Khám phá danh mục, rồi đăng nhập khi bạn sẵn sàng xem."
+  ,"browseCategoriesReady": "Khám phá phim ngắn ngay cả khi chưa đăng nhập."
   ,"noPreviewsYet": "Chưa có nội dung xem trước"
   ,"checkBackFreshDramas": "Hãy quay lại sau để xem các drama ngắn mới."
   ,"vipEpisodeOpen": "Mọi tập VIP đều đã mở khóa"
@@ -112,4 +129,19 @@
   ,"adDiagnostics": "Chẩn đoán quảng cáo"
   ,"testMode": "chế độ thử nghiệm"
   ,"inspector": "Trình kiểm tra"
+  ,"signInToSyncAccount": "Đăng nhập khi bạn muốn đồng bộ danh sách, phần thưởng và tài khoản."
+  ,"watchOnShortiGo": "Xem {title} trên ShortiGo · Tập {episode}"
+  ,"rewardedAdTransaction": "Thưởng xem quảng cáo"
+  ,"purchaseTransaction": "Mua hàng"
+  ,"episodeUnlockedTransaction": "Mở khóa tập"
+  ,"refundTransaction": "Hoàn tiền"
+  ,"invalidUrlError": "URL máy chủ không hợp lệ."
+  ,"notConfiguredError": "Chưa cấu hình máy chủ API phim."
+  ,"timeoutError": "Máy chủ phản hồi quá lâu. Vui lòng thử lại."
+  ,"networkError": "Không thể kết nối tới máy chủ phim."
+  ,"malformedJsonError": "Máy chủ trả về dữ liệu không hợp lệ."
+  ,"invalidSchemaError": "Máy chủ không trả về đúng cấu trúc dữ liệu."
+  ,"notFoundError": "Không tìm thấy nội dung trên máy chủ."
+  ,"sourceLockedError": "Tập này hiện chưa có nguồn phát công khai."
+  ,"genericContentApiError": "Không thể tải nội dung lúc này. Vui lòng thử lại."
 }

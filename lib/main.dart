@@ -12,7 +12,7 @@ import 'app.dart';
 import 'bootstrap/firebase_bootstrap.dart';
 import 'core/env/env.dart';
 import 'core/router/app_router.dart';
-import 'data/iap/revenuecat_iap_gateway.dart';
+import 'core/providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -53,8 +53,7 @@ Future<void> main() async {
         options.dsn = env.sentryDsn;
       });
     }
-    final iap = RevenueCatIapGateway();
-    await iap.initialize(
+    await revenueCatGateway.initialize(
       appleApiKey: env.revenueCatApiKeyIos,
       googleApiKey: env.revenueCatApiKeyAndroid,
     );

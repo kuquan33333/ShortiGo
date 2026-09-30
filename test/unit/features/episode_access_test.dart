@@ -29,9 +29,26 @@ void main() {
       EpisodeAccessState.open,
     );
   });
+
+  test('provider locked and unavailable episodes never become ShortiGo VIP',
+      () {
+    expect(
+      accessFor(_episode(sourceLocked: true), user),
+      EpisodeAccessState.sourceLocked,
+    );
+    expect(
+      accessFor(_episode(sourceAvailable: false), user),
+      EpisodeAccessState.sourceUnavailable,
+    );
+  });
 }
 
-Episode _episode({bool isVipLocked = false, int? bonusUnlockCost}) {
+Episode _episode({
+  bool isVipLocked = false,
+  int? bonusUnlockCost,
+  bool sourceAvailable = true,
+  bool sourceLocked = false,
+}) {
   return Episode(
     id: 'episode-1',
     seriesId: 'series-1',
@@ -41,5 +58,7 @@ Episode _episode({bool isVipLocked = false, int? bonusUnlockCost}) {
     durationSec: 60,
     isVipLocked: isVipLocked,
     bonusUnlockCost: bonusUnlockCost,
+    sourceAvailable: sourceAvailable,
+    sourceLocked: sourceLocked,
   );
 }

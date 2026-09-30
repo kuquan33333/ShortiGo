@@ -1,3 +1,5 @@
+import '../../../l10n/app_localizations.dart';
+
 Uri shortShareUrl({
   required String seriesId,
   required String episodeId,
@@ -6,11 +8,12 @@ Uri shortShareUrl({
 }
 
 String shortShareText({
+  required AppLocalizations l10n,
   required String seriesTitle,
   required int episodeOrder,
   required String seriesId,
   required String episodeId,
 }) {
   final url = shortShareUrl(seriesId: seriesId, episodeId: episodeId);
-  return 'Watch $seriesTitle EP.$episodeOrder on ShortiGo\n$url';
+  return '${l10n.watchOnShortiGo(episodeOrder, seriesTitle)}\n$url';
 }

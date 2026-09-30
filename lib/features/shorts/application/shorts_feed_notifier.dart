@@ -52,7 +52,11 @@ class ShortsFeedNotifier extends AsyncNotifier<ShortsFeedState> {
       );
       final episodes = <Episode>[];
       for (var seriesIndex = 0; seriesIndex < lists.length; seriesIndex++) {
-        episodes.addAll(lists[seriesIndex]);
+        episodes.addAll(
+          lists[seriesIndex].where(
+            (episode) => episode.sourceAvailable && !episode.sourceLocked,
+          ),
+        );
       }
       final seriesRankById = {
         for (var index = 0; index < series.length; index++)

@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/perf/trace.dart';
 import '../../../core/providers.dart';
 import '../../../domain/entities/episode.dart';
+import '../../../data/remote/content_api_models.dart';
+import 'episode_access.dart';
 
 class EpisodePlayerState {
   const EpisodePlayerState({this.controller, this.episode, this.error});
@@ -41,7 +43,23 @@ class EpisodePlayerNotifier
     return withTrace('episode_play', () async {
       final episodeRepo = ref.read(episodeRepositoryProvider);
       final videoSource = ref.read(videoSourceProvider);
-      final episode = await episodeRepo.byId(args.episodeId);
+      Episode episode;
+      try {
+        episode = await episodeRepo.byId(args.episodeId);
+      } on ContentApiException catch (error) {
+        if (error.code != 'episode-not-loaded') rethrow;
+        final episodes = await episodeRepo.bySeriesId(args.seriesId);
+        episode = episodes.firstWhere(
+          (item) => item.id == args.episodeId,
+          orElse: () => throw StateError('episode-not-found'),
+        );
+      }
+
+      final user = ref.read(currentAppUserDocProvider).value;
+      final access = accessFor(episode, user);
+      if (access != EpisodeAccessState.open) {
+        return EpisodePlayerState(episode: episode);
+      }
 
       final url = await videoSource.playableUrl(
         seriesId: args.seriesId,

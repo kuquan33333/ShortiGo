@@ -56,7 +56,7 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             async.when(
               loading: () => const Center(child: CircularProgressIndicator()),
               error: (error, _) => Text(
-                friendlyErrorFor(error).message,
+                localizedFriendlyErrorFor(context, error).message,
                 style: const TextStyle(color: Colors.redAccent),
               ),
               data: (state) => state.error != null

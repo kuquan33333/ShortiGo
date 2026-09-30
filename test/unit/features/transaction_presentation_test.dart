@@ -1,6 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shortigo/domain/entities/transaction.dart';
 import 'package:shortigo/features/profile/presentation/transaction_presentation.dart';
+import 'package:shortigo/l10n/app_localizations_en.dart';
 
 void main() {
   test('spending is shown as a negative wallet movement', () {
@@ -13,8 +14,9 @@ void main() {
       at: DateTime.utc(2026, 6, 4),
     );
 
-    expect(transaction.walletDeltaLabel, '-60 bonus');
-    expect(transaction.friendlyTitle, 'Episode unlocked');
+    final l10n = AppLocalizationsEn();
+    expect(transaction.walletDeltaLabel(l10n), '-60 Bonus');
+    expect(transaction.friendlyTitle(l10n), 'Episode unlocked');
   });
 
   test('rewards are shown as positive wallet movements', () {
@@ -27,7 +29,8 @@ void main() {
       at: DateTime.utc(2026, 6, 4),
     );
 
-    expect(transaction.walletDeltaLabel, '+12 bonus');
-    expect(transaction.friendlyTitle, 'Rewarded ad');
+    final l10n = AppLocalizationsEn();
+    expect(transaction.walletDeltaLabel(l10n), '+12 Bonus');
+    expect(transaction.friendlyTitle(l10n), 'Rewarded ad');
   });
 }

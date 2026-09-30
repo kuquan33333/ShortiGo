@@ -3,6 +3,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:drift/native.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shortigo/core/providers.dart';
+import 'package:shortigo/data/remote/content_api_models.dart';
+import 'package:shortigo/data/local/guest_favorites_repository.dart';
 import 'package:shortigo/data/local/shortigo_database.dart';
 import 'package:shortigo/domain/entities/category.dart';
 import 'package:shortigo/domain/entities/series.dart';
@@ -56,6 +58,7 @@ void main() {
   test('loads local guest favorites when there is no app user', () async {
     final database = ShortigoDatabase.forTesting(NativeDatabase.memory());
     addTearDown(database.close);
+    await GuestFavoritesRepository(database).save(_series('local'));
     final container = _container(
       repo: repo,
       user: const AsyncData(null),
@@ -65,7 +68,7 @@ void main() {
 
     final state = await container.read(myListNotifierProvider.future);
 
-    expect(state.series, isEmpty);
+    expect(state.series.map((series) => series.id), ['local']);
     expect(state.requiresSignIn, isFalse);
     verifyNever(() => repo.byId(any()));
   });
@@ -104,5 +107,30 @@ void main() {
     expect(state.series.map((series) => series.id), ['s2', 's1']);
     verify(() => repo.byId('s2')).called(1);
     verify(() => repo.byId('s1')).called(1);
+  });
+
+  test('skips a dead cloud favorite without failing the whole list', () async {
+    when(() => repo.byId('dead')).thenThrow(
+      const ContentApiException(
+        code: 'not-found',
+        message: 'missing',
+        statusCode: 404,
+      ),
+    );
+    when(() => repo.byId('alive')).thenAnswer((_) async => _series('alive'));
+    final database = ShortigoDatabase.forTesting(NativeDatabase.memory());
+    final container = _container(
+      repo: repo,
+      user: AsyncData(_user(['dead', 'alive'])),
+      database: database,
+    );
+    addTearDown(database.close);
+    addTearDown(container.dispose);
+
+    final state = await container.read(myListNotifierProvider.future);
+
+    expect(state.series.map((series) => series.id), ['alive']);
+    verify(() => repo.byId('dead')).called(1);
+    verify(() => repo.byId('alive')).called(1);
   });
 }

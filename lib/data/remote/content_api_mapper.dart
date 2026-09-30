@@ -41,6 +41,12 @@ class ContentApiMapper {
     final chapterId = _string(json['chapterId'] ?? json['id']);
     final index = _int(json['chapterIndex'] ?? json['serialNumber']);
     final id = chapterId.isEmpty ? '$seriesId::$index' : chapterId;
+    final sourceLocked = _flag(json['isCharge']) ||
+        _flag(json['isPay']) ||
+        _flag(json['locked']);
+    final sourceAvailable = json.containsKey('available')
+        ? json['available'] == true && !sourceLocked
+        : !sourceLocked;
     return Episode(
       id: id,
       seriesId: seriesId,
@@ -55,6 +61,9 @@ class ContentApiMapper {
       durationSec: _int(json['durationSec'] ?? json['duration']),
       // Source lock and ShortiGo VIP are deliberately independent.
       isVipLocked: false,
+      sourceAvailable: sourceAvailable,
+      sourceLocked: sourceLocked,
+      chapterName: _string(json['chapterName'] ?? json['chapter_name']),
     );
   }
 
@@ -71,6 +80,13 @@ class ContentApiMapper {
   static int _int(Object? value) {
     if (value is num) return value.toInt();
     return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  static bool _flag(Object? value) {
+    if (value == true) return true;
+    if (value is num) return value != 0;
+    final normalized = value?.toString().trim().toLowerCase();
+    return normalized == 'true' || normalized == '1' || normalized == 'yes';
   }
 
   static DateTime _date(Object? value) {

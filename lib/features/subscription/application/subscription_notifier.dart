@@ -58,9 +58,8 @@ class SubscriptionNotifier extends AsyncNotifier<SubscriptionState> {
       state = AsyncData(
         SubscriptionState(
           offerings: offerings,
-          message: restored
-              ? 'VIP purchases restored.'
-              : 'No active VIP purchase was found.',
+          message:
+              restored ? 'subscription-restored' : 'no-active-vip-purchase',
         ),
       );
     } catch (error) {

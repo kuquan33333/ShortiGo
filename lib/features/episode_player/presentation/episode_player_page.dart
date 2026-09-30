@@ -82,7 +82,11 @@ class EpisodePlayerPage extends ConsumerWidget {
                 } catch (error) {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text(friendlyErrorFor(error).message)),
+                      SnackBar(
+                        content: Text(
+                          localizedFriendlyErrorFor(context, error).message,
+                        ),
+                      ),
                     );
                   }
                 }
@@ -90,7 +94,38 @@ class EpisodePlayerPage extends ConsumerWidget {
             );
           }
 
-          return EpisodePlayerView(controller: state.controller!);
+          if (access == EpisodeAccessState.sourceLocked ||
+              access == EpisodeAccessState.sourceUnavailable) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      access == EpisodeAccessState.sourceLocked
+                          ? Icons.lock_outline
+                          : Icons.warning_amber_rounded,
+                      color: Colors.white,
+                      size: 64,
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      access == EpisodeAccessState.sourceLocked
+                          ? l10n.sourceLocked
+                          : l10n.sourceUnavailable,
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
+
+          return state.controller == null
+              ? Center(child: Text(l10n.sourceUnavailable))
+              : EpisodePlayerView(controller: state.controller!);
         },
       ),
     );

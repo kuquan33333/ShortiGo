@@ -58,6 +58,22 @@ class VideoCard extends StatelessWidget {
                 ? onUnlock
                 : onEarnBonus,
           )
+        else if (isActive && access == EpisodeAccessState.sourceLocked)
+          _LockedOverlay(
+            icon: Icons.lock_outline,
+            title: l10n.sourceLocked,
+            subtitle: l10n.sourceLockedDescription,
+            buttonLabel: null,
+            onPressed: null,
+          )
+        else if (isActive && access == EpisodeAccessState.sourceUnavailable)
+          _LockedOverlay(
+            icon: Icons.warning_amber_rounded,
+            title: l10n.sourceUnavailable,
+            subtitle: l10n.sourceUnavailableDescription,
+            buttonLabel: null,
+            onPressed: null,
+          )
         else if (isActive && hasError)
           ColoredBox(
             color: Colors.black,
@@ -83,15 +99,15 @@ class _LockedOverlay extends StatelessWidget {
     required this.icon,
     required this.title,
     required this.subtitle,
-    required this.buttonLabel,
-    required this.onPressed,
+    this.buttonLabel,
+    this.onPressed,
   });
 
   final IconData icon;
   final String title;
   final String subtitle;
-  final String buttonLabel;
-  final VoidCallback onPressed;
+  final String? buttonLabel;
+  final VoidCallback? onPressed;
 
   @override
   Widget build(BuildContext context) {
@@ -124,16 +140,18 @@ class _LockedOverlay extends StatelessWidget {
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(height: 28),
-              SizedBox(
-                width: double.infinity,
-                height: 58,
-                child: FilledButton.icon(
-                  onPressed: onPressed,
-                  icon: const Icon(Icons.bolt_rounded),
-                  label: Text(buttonLabel),
+              if (buttonLabel != null && onPressed != null) ...[
+                const SizedBox(height: 28),
+                SizedBox(
+                  width: double.infinity,
+                  height: 58,
+                  child: FilledButton.icon(
+                    onPressed: onPressed,
+                    icon: const Icon(Icons.bolt_rounded),
+                    label: Text(buttonLabel!),
+                  ),
                 ),
-              ),
+              ],
             ],
           ),
         ),

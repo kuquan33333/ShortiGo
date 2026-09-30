@@ -182,12 +182,14 @@ class _ShortsActionRailState extends ConsumerState<ShortsActionRail> {
       await SharePlus.instance.share(
         ShareParams(
           text: shortShareText(
+            l10n: AppLocalizations.of(context)!,
             seriesTitle: widget.series.title,
             episodeOrder: widget.episode.order,
             seriesId: widget.series.id,
             episodeId: widget.episode.id,
           ),
-          subject: 'Watch ${widget.series.title} on ShortiGo',
+          subject: AppLocalizations.of(context)!
+              .watchOnShortiGo(widget.episode.order, widget.series.title),
           sharePositionOrigin:
               box == null ? null : box.localToGlobal(Offset.zero) & box.size,
         ),
@@ -211,7 +213,9 @@ class _ShortsActionRailState extends ConsumerState<ShortsActionRail> {
   void _showError(Object error) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(friendlyErrorFor(error).message)),
+      SnackBar(
+        content: Text(localizedFriendlyErrorFor(context, error).message),
+      ),
     );
   }
 }

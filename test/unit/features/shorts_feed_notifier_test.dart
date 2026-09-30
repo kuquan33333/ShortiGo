@@ -27,6 +27,8 @@ void main() {
               _episode('s1_e3', 's1', 3),
               _episode('s1_e4', 's1', 4),
               _episode('s1_e5', 's1', 5),
+              _episode('s1_locked', 's1', 6, sourceLocked: true),
+              _episode('s1_unavailable', 's1', 7, sourceAvailable: false),
             ],
             's2': [
               _episode('s2_e1', 's2', 1),
@@ -51,6 +53,10 @@ void main() {
       's2_e1',
       's1_e1',
     ]);
+    expect(state.episodes.map((episode) => episode.id),
+        isNot(contains('s1_locked')));
+    expect(state.episodes.map((episode) => episode.id),
+        isNot(contains('s1_unavailable')));
   });
 }
 
@@ -112,6 +118,8 @@ Episode _episode(
   String seriesId,
   int order, {
   int? bonusUnlockCost,
+  bool sourceAvailable = true,
+  bool sourceLocked = false,
 }) {
   return Episode(
     id: id,
@@ -121,5 +129,7 @@ Episode _episode(
     thumbnailUrl: 'https://example.com/$id.jpg',
     durationSec: 60,
     bonusUnlockCost: bonusUnlockCost,
+    sourceAvailable: sourceAvailable,
+    sourceLocked: sourceLocked,
   );
 }

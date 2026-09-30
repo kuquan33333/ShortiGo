@@ -5,7 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/providers.dart';
+import '../../../core/error/friendly_error.dart';
 import '../../../data/remote/content_api_mapper.dart';
+import '../../../data/remote/remote_series_repository.dart';
 import '../../../domain/entities/series.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/loading_view.dart';
@@ -77,10 +79,14 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         _suggestions = response[1] as List<String>;
         _loading = false;
       });
+      final repository = ref.read(seriesRepositoryProvider);
+      if (repository is RemoteSeriesRepository) {
+        repository.rememberAll(results);
+      }
     } catch (error) {
       if (!mounted || generation != _requestGeneration) return;
       setState(() {
-        _error = error.toString();
+        _error = localizedFriendlyErrorFor(context, error).message;
         _loading = false;
         _results = const [];
       });

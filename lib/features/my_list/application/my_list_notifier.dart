@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/providers.dart';
+import '../../../data/remote/content_api_models.dart';
 import '../../../domain/entities/series.dart';
 
 class MyListState {
@@ -31,9 +32,16 @@ class MyListNotifier extends AsyncNotifier<MyListState> {
     final repo = ref.read(seriesRepositoryProvider);
     final series = <Series>[];
     for (final id in favoriteSeriesIds) {
-      final saved = await repo.byId(id);
-      if (saved.isPublished) {
-        series.add(saved);
+      try {
+        final saved = await repo.byId(id);
+        if (saved.isPublished) {
+          series.add(saved);
+        }
+      } on ContentApiException catch (error) {
+        if (error.code == 'not-found' || error.statusCode == 404) {
+          continue;
+        }
+        rethrow;
       }
     }
 

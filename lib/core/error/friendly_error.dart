@@ -14,29 +14,6 @@ class FriendlyError {
   String toString() => '$title: $message';
 }
 
-FriendlyError friendlyErrorFor(Object e) {
-  final s = e.toString();
-  if (s.contains('SocketException') || s.contains('Failed host lookup')) {
-    return FriendlyError(
-      title: 'No connection',
-      message: 'Check your internet and try again.',
-      cause: e,
-    );
-  }
-  if (s.contains('TimeoutException')) {
-    return FriendlyError(
-      title: 'That took too long',
-      message: 'Try again in a moment.',
-      cause: e,
-    );
-  }
-  return FriendlyError(
-    title: 'Something went wrong',
-    message: 'We hit an unexpected error. Pull to refresh or try again.',
-    cause: e,
-  );
-}
-
 FriendlyError localizedFriendlyErrorFor(
   BuildContext context,
   Object error,
@@ -44,11 +21,18 @@ FriendlyError localizedFriendlyErrorFor(
   final l10n = AppLocalizations.of(context)!;
   if (error is ContentApiException) {
     final message = switch (error.code) {
-      'not-configured' => l10n.notConfigured,
-      'source-locked' => l10n.sourceLocked,
-      'timeout' => l10n.contentServerSlow,
-      'network' => l10n.contentServerUnavailable,
-      _ => error.message,
+      'invalid-url' => l10n.invalidUrlError,
+      'not-configured' => l10n.notConfiguredError,
+      'timeout' => l10n.timeoutError,
+      'network' => l10n.networkError,
+      'malformed-json' => l10n.malformedJsonError,
+      'invalid-schema' => l10n.invalidSchemaError,
+      'invalid-source-status' => l10n.invalidSchemaError,
+      'not-found' => l10n.notFoundError,
+      'http-404' => l10n.notFoundError,
+      'source-locked' => l10n.sourceLockedError,
+      'http-403' => l10n.sourceLockedError,
+      _ => l10n.genericContentApiError,
     };
     return FriendlyError(
       title: l10n.contentSource,
@@ -56,5 +40,9 @@ FriendlyError localizedFriendlyErrorFor(
       cause: error,
     );
   }
-  return friendlyErrorFor(error);
+  return FriendlyError(
+    title: l10n.contentSource,
+    message: l10n.genericContentApiError,
+    cause: error,
+  );
 }

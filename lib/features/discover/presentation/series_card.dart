@@ -30,19 +30,25 @@ class SeriesCard extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              CachedNetworkImage(
-                imageUrl: series.coverUrl,
-                fit: BoxFit.cover,
-                placeholder: (_, __) =>
-                    Container(color: AppColors.surfaceElevated),
-                errorWidget: (_, __, ___) => Container(
-                  color: AppColors.surfaceElevated,
-                  child: const Icon(
-                    Icons.broken_image,
-                    color: AppColors.textMuted,
+              if (series.coverUrl.isNotEmpty)
+                CachedNetworkImage(
+                  imageUrl: series.coverUrl,
+                  fit: BoxFit.cover,
+                  placeholder: (_, __) =>
+                      Container(color: AppColors.surfaceElevated),
+                  errorWidget: (_, __, ___) => Container(
+                    color: AppColors.surfaceElevated,
+                    child: const Icon(
+                      Icons.broken_image,
+                      color: AppColors.textMuted,
+                    ),
                   ),
+                )
+              else
+                const ColoredBox(
+                  color: AppColors.surfaceElevated,
+                  child: Icon(Icons.movie_outlined, color: AppColors.textMuted),
                 ),
-              ),
               Positioned.fill(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
