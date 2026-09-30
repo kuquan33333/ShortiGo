@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
+import '../../../l10n/app_localizations.dart';
 
 class AccountActionsSection extends StatelessWidget {
   const AccountActionsSection({
@@ -18,25 +19,26 @@ class AccountActionsSection extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        const Text(
-          'Account & Subscription',
+        Text(
+          l10n.accountAndSubscription,
           style: TextStyle(color: AppColors.textSecondary),
         ),
         const SizedBox(height: 8),
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.restore),
-          title: const Text('Restore purchases'),
+          title: Text(l10n.restorePurchases),
           onTap: onRestorePurchases,
         ),
         ListTile(
           contentPadding: EdgeInsets.zero,
           leading: const Icon(Icons.delete_outline, color: AppColors.error),
-          title: const Text(
-            'Delete account',
+          title: Text(
+            l10n.deleteAccount,
             style: TextStyle(color: AppColors.error),
           ),
           trailing: isDeleting
@@ -54,24 +56,21 @@ class AccountActionsSection extends StatelessWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
+    final l10n = AppLocalizations.of(context)!;
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Delete your ShortiGo account?'),
-        content: const Text(
-          'Your profile, My List, and viewing activity will be permanently '
-          'deleted. Your transaction history is retained for fraud prevention '
-          'and financial recordkeeping.',
-        ),
+        title: Text(l10n.deleteAccountPrompt),
+        content: Text(l10n.deleteAccountDescription),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
+            child: Text(l10n.cancel),
           ),
           FilledButton(
             onPressed: () => Navigator.pop(context, true),
             style: FilledButton.styleFrom(backgroundColor: AppColors.error),
-            child: const Text('Delete account'),
+            child: Text(l10n.deleteAccount),
           ),
         ],
       ),

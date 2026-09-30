@@ -1229,9 +1229,6 @@ PODS:
   - Firebase/Performance (11.11.0):
     - Firebase/CoreOnly
     - FirebasePerformance (~> 11.11.0)
-  - Firebase/Storage (11.11.0):
-    - Firebase/CoreOnly
-    - FirebaseStorage (~> 11.11.0)
   - firebase_app_installations (0.3.3):
     - Firebase/Installations (= 11.11.0)
     - firebase_core
@@ -1245,10 +1242,6 @@ PODS:
     - Flutter
   - firebase_performance (0.10.1-10):
     - Firebase/Performance (= 11.11.0)
-    - firebase_core
-    - Flutter
-  - firebase_storage (12.4.10):
-    - Firebase/Storage (= 11.11.0)
     - firebase_core
     - Flutter
   - FirebaseABTesting (11.11.0):
@@ -1326,13 +1319,6 @@ PODS:
     - nanopb (~> 3.30910.0)
     - PromisesSwift (~> 2.1)
   - FirebaseSharedSwift (11.11.0)
-  - FirebaseStorage (11.11.0):
-    - FirebaseAppCheckInterop (~> 11.0)
-    - FirebaseAuthInterop (~> 11.0)
-    - FirebaseCore (~> 11.11.0)
-    - FirebaseCoreExtension (~> 11.11.0)
-    - GoogleUtilities/Environment (~> 8.0)
-    - GTMSessionFetcher/Core (< 5.0, >= 3.4)
   - Flutter (1.0.0)
   - GCDWebServer (3.5.4):
     - GCDWebServer/Core (= 3.5.4)
@@ -1562,7 +1548,6 @@ DEPENDENCIES:
   - firebase_auth (from `.symlinks/plugins/firebase_auth/ios`)
   - firebase_core (from `.symlinks/plugins/firebase_core/ios`)
   - firebase_performance (from `.symlinks/plugins/firebase_performance/ios`)
-  - firebase_storage (from `.symlinks/plugins/firebase_storage/ios`)
   - FirebaseSharedSwift (= 11.11.0)
   - Flutter (from `Flutter`)
   - google_mobile_ads (from `.symlinks/plugins/google_mobile_ads/ios`)
@@ -1599,7 +1584,6 @@ SPEC REPOS:
     - FirebaseRemoteConfigInterop
     - FirebaseSessions
     - FirebaseSharedSwift
-    - FirebaseStorage
     - GCDWebServer
     - Google-Mobile-Ads-SDK
     - GoogleDataTransport
@@ -1636,8 +1620,6 @@ EXTERNAL SOURCES:
     :path: ".symlinks/plugins/firebase_core/ios"
   firebase_performance:
     :path: ".symlinks/plugins/firebase_performance/ios"
-  firebase_storage:
-    :path: ".symlinks/plugins/firebase_storage/ios"
   Flutter:
     :path: Flutter
   google_mobile_ads:
@@ -1674,7 +1656,6 @@ SPEC CHECKSUMS:
   firebase_auth: a2a7a34078ceca211bc43c2a8361e788161acf62
   firebase_core: cd348199e28023d8d3d357ea031e1ac91f286e1f
   firebase_performance: 23808cf17fe4cebe2ab132d16ddd5d43f9c3432e
-  firebase_storage: 2d584db63a5d3c84c604b399e96bc5b8e7280016
   FirebaseABTesting: 8551c24eb28e300ce697f8eb72c1a519bb96eb40
   FirebaseAppCheckInterop: 06fe5a3799278ae4667e6c432edd86b1030fa3df
   FirebaseAuth: 783fa4cc0420b0f6eed580721b12d4f0a5306746
@@ -1690,7 +1671,6 @@ SPEC CHECKSUMS:
   FirebaseRemoteConfigInterop: 1c6135e8a094cc6368949f5faeeca7ee8948b8aa
   FirebaseSessions: f5c6bfeb66a7202deaf33352017bb6365e395820
   FirebaseSharedSwift: b1d32c3b29a911dc174bcf363f2f70bda9509d2f
-  FirebaseStorage: 1c04b0ac8126b6fada8c9a09458f59c31868f2df
   Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
   GCDWebServer: 2c156a56c8226e2d5c0c3f208a3621ccffbe3ce4
   Google-Mobile-Ads-SDK: 5a6d005a6cb5b5e8f4c7b69ca05cdea79c181139

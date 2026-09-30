@@ -1,20 +1,22 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart' as fb;
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../bootstrap/firebase_bootstrap.dart';
 import 'env/env.dart';
 import '../data/ads/admob_ad_gateway.dart';
-import '../data/firestore/episode_repository.dart';
-import '../data/firestore/series_repository.dart';
 import '../data/firestore/transaction_repository.dart';
 import '../data/firestore/user_repository.dart';
 import '../data/iap/revenuecat_iap_gateway.dart';
 import '../data/social/firestore_social_actions_gateway.dart';
 import '../data/rewards/firestore_reward_gateway.dart';
 import '../data/local/shortigo_database.dart';
+import '../data/local/guest_favorites_repository.dart';
+import '../data/remote/content_api_client.dart';
+import '../data/remote/remote_episode_repository.dart';
+import '../data/remote/remote_series_repository.dart';
+import '../data/remote/remote_video_source.dart';
 import '../data/rewards/reward_api_gateway.dart';
-import '../data/storage/firebase_video_source.dart';
 import '../domain/entities/user.dart';
 import '../domain/interfaces/ad_gateway.dart';
 import '../domain/interfaces/episode_repository.dart';
@@ -28,17 +30,25 @@ import '../domain/interfaces/video_source.dart';
 
 // === Foundational providers (always available) ===
 
-final firestoreProvider =
-    Provider<FirebaseFirestore>((_) => FirebaseFirestore.instance);
+final firebaseAvailableProvider =
+    Provider<bool>((_) => FirebaseBootstrap.isAvailable);
 
-final firebaseStorageProvider =
-    Provider<FirebaseStorage>((_) => FirebaseStorage.instance);
+final firestoreProvider = Provider<FirebaseFirestore>((_) {
+  if (!FirebaseBootstrap.isAvailable) {
+    throw StateError('Dịch vụ tài khoản hiện chưa được cấu hình.');
+  }
+  return FirebaseFirestore.instance;
+});
 
 final firebaseAuthProvider = Provider<fb.FirebaseAuth>((_) {
+  if (!FirebaseBootstrap.isAvailable) {
+    throw StateError('Dịch vụ tài khoản hiện chưa được cấu hình.');
+  }
   return fb.FirebaseAuth.instance;
 });
 
 final currentAuthUserProvider = StreamProvider<fb.User?>((ref) {
+  if (!ref.watch(firebaseAvailableProvider)) return Stream.value(null);
   return ref.watch(firebaseAuthProvider).authStateChanges();
 });
 
@@ -54,15 +64,29 @@ final shortigoDatabaseProvider = Provider<ShortigoDatabase>((_) {
   return ShortigoDatabase();
 });
 
-final seriesRepositoryProvider = Provider<SeriesRepository>((ref) {
-  return FirestoreSeriesRepository(
-    ref.watch(firestoreProvider),
-    featuredDocId: 'featured',
+final guestFavoritesRepositoryProvider =
+    Provider<GuestFavoritesRepository>((ref) {
+  return GuestFavoritesRepository(ref.watch(shortigoDatabaseProvider));
+});
+
+final guestFavoriteSavedProvider =
+    FutureProvider.family<bool, String>((ref, id) {
+  return ref.watch(guestFavoritesRepositoryProvider).contains(id);
+});
+
+final contentApiClientProvider = Provider<ContentApiClient>((ref) {
+  return ContentApiClient(
+    database: ref.watch(shortigoDatabaseProvider),
+    defaultBaseUrl: env.contentApiBaseUrl,
   );
 });
 
+final seriesRepositoryProvider = Provider<SeriesRepository>((ref) {
+  return RemoteSeriesRepository(ref.watch(contentApiClientProvider));
+});
+
 final episodeRepositoryProvider = Provider<EpisodeRepository>((ref) {
-  return FirestoreEpisodeRepository(ref.watch(firestoreProvider));
+  return RemoteEpisodeRepository(ref.watch(contentApiClientProvider));
 });
 
 final transactionRepositoryProvider = Provider<TransactionRepository>((ref) {
@@ -81,7 +105,7 @@ final socialActionsGatewayProvider = Provider<SocialActionsGateway>((ref) {
 });
 
 final videoSourceProvider = Provider<VideoSource>((ref) {
-  return FirebaseStorageVideoSource(ref.watch(firebaseStorageProvider));
+  return RemoteVideoSource(ref.watch(contentApiClientProvider));
 });
 
 final adGatewayProvider = Provider<AdGateway>((_) {

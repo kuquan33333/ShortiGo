@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../../core/providers.dart';
+import '../../../bootstrap/firebase_bootstrap.dart';
 
 class AuthState {
   const AuthState({
@@ -24,6 +25,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   }
 
   Future<void> signInWithEmail(String email, String password) async {
+    if (!_ensureFirebase()) return;
     state = const AsyncLoading<AuthState>().copyWithPrevious(state);
     try {
       final cred = await ref
@@ -36,6 +38,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   }
 
   Future<void> registerWithEmail(String email, String password) async {
+    if (!_ensureFirebase()) return;
     state = const AsyncLoading<AuthState>().copyWithPrevious(state);
     try {
       final cred = await ref
@@ -49,6 +52,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   }
 
   Future<void> signInWithGoogle() async {
+    if (!_ensureFirebase()) return;
     state = const AsyncLoading<AuthState>().copyWithPrevious(state);
     try {
       final googleUser = await GoogleSignIn().signIn();
@@ -73,8 +77,17 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
   }
 
   Future<void> signOut() async {
+    if (!FirebaseBootstrap.isAvailable) return;
     await ref.read(firebaseAuthProvider).signOut();
     state = const AsyncData(AuthState());
+  }
+
+  bool _ensureFirebase() {
+    if (FirebaseBootstrap.isAvailable) return true;
+    state = const AsyncData(
+      AuthState(error: 'Dịch vụ tài khoản hiện chưa được cấu hình.'),
+    );
+    return false;
   }
 }
 

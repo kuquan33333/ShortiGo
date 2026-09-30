@@ -1,0 +1,115 @@
+{
+  "@@locale": "en",
+  "appTitle": "ShortiGo",
+  "discover": "Discover",
+  "shorts": "Shorts",
+  "rewards": "Rewards",
+  "myList": "My List",
+  "profile": "Profile",
+  "settings": "Settings",
+  "contentSource": "Content source",
+  "contentApiServer": "Movie API server",
+  "testConnection": "Test connection",
+  "save": "Save",
+  "saved": "Saved",
+  "restoreDefault": "Restore default",
+  "serverStatus": "Server status",
+  "active": "Active",
+  "unavailable": "Unavailable",
+  "notConfigured": "Not configured",
+  "language": "Language",
+  "providers": "Providers",
+  "search": "Search",
+  "searchHint": "Search short dramas",
+  "noResults": "No results found.",
+  "noShorts": "No shorts yet.",
+  "seriesNotFound": "Series not found.",
+  "noSavedSeries": "You haven't saved any series yet.",
+  "saveSeriesHint": "Save a series and it will appear here.",
+  "signIn": "Sign in",
+  "createAccount": "Create account",
+  "createAccountOrSignIn": "Create account or sign in",
+  "continueWithGoogle": "Continue with Google",
+  "guestMode": "Guest mode",
+  "guestMessage": "You are browsing ShortiGo as a guest.",
+  "signInToUse": "Sign in to use this feature.",
+  "accountServiceUnavailable": "Account services are not configured yet.",
+  "signOut": "Sign out",
+  "tryAgain": "Try again",
+  "sourceLocked": "This episode does not have a public playback source yet.",
+  "episodeCount": "{count} episodes",
+  "forYou": "For You",
+  "newUpdates": "New",
+  "hot": "Hot",
+  "adventure": "Adventure",
+  "scary": "Scary",
+  "anime": "Anime",
+  "vip": "VIP",
+  "durationSeconds": "{seconds}s",
+  "unknownDuration": "",
+  "accountAndSubscription": "Account & Subscription",
+  "restorePurchases": "Restore purchases",
+  "deleteAccount": "Delete account",
+  "bonus": "Bonus",
+  "coins": "Coins",
+  "vipViewer": "VIP viewer",
+  "freeViewer": "Free viewer",
+  "dailyCheckIn": "Daily check-in",
+  "watchAnAd": "Watch an ad",
+  "achievements": "Achievements",
+  "done": "Done",
+  "claim": "Claim",
+  "retry": "Retry",
+  "info": "Info",
+  "readMore": "Read more",
+  "email": "Email",
+  "password": "Password",
+  "browseAsGuest": "Continue as guest"
+  ,"cancel": "Cancel"
+  ,"earned": "Earned"
+  ,"unlocked": "Unlocked"
+  ,"recentActivity": "Recent activity"
+  ,"getVip": "Get VIP"
+  ,"yes": "Yes"
+  ,"no": "No"
+  ,"deleteAccountPrompt": "Delete your ShortiGo account?"
+  ,"deleteAccountDescription": "Your profile, My List, and viewing activity will be permanently deleted."
+  ,"contentServerSlow": "The content server took too long to respond."
+  ,"contentServerUnavailable": "Unable to connect to the content server."
+  ,"keepStreakAlive": "Keep your streak alive"
+  ,"enoughToUnlock": "You have enough to unlock an episode"
+  ,"bonusUntilNext": "{count} bonus until your next episode unlock"
+  ,"claimedToday": "Claimed today"
+  ,"bonusFive": "+5 bonus"
+  ,"watch": "Watch"
+  ,"testAdReady": "Test ad ready · +12 bonus"
+  ,"bonusTwelve": "+12 bonus"
+  ,"preparingAd": "Preparing an ad..."
+  ,"adPlaying": "Ad is playing"
+  ,"confirmingReward": "Confirming your reward..."
+  ,"noAdAvailable": "No ad available yet"
+  ,"checkConnection": "Check your connection"
+  ,"adSetupNeedsAttention": "Ad setup needs attention"
+  ,"adUnavailable": "Ad unavailable right now"
+  ,"activeToday": "Active today"
+  ,"startToday": "Start today"
+  ,"firstSpark": "First Spark"
+  ,"unlockReady": "Unlock ready"
+  ,"vipEpisode": "VIP episode"
+  ,"upgradeToWatch": "Upgrade to watch this short."
+  ,"goToRewards": "Go to rewards"
+  ,"unlockThisEpisode": "Unlock this episode"
+  ,"bonusBalance": "{cost} bonus · Your balance: {balance}"
+  ,"earnBonus": "Earn bonus"
+  ,"tapToRetry": "Tap to retry"
+  ,"previewShortiGo": "Preview ShortiGo"
+  ,"shortDramasBeforeSignup": "Short dramas before you sign up"
+  ,"browseCategoriesReady": "Browse categories, then sign in when you are ready to watch."
+  ,"noPreviewsYet": "No previews yet"
+  ,"checkBackFreshDramas": "Check back soon for fresh short dramas."
+  ,"vipEpisodeOpen": "Every VIP episode is open"
+  ,"bonusSelectedEpisodes": "Earn bonus to unlock selected episodes"
+  ,"adDiagnostics": "Ad diagnostics"
+  ,"testMode": "test mode"
+  ,"inspector": "Inspector"
+}

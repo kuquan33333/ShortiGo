@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/error/friendly_error.dart';
 import '../../../domain/entities/category.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/loading_view.dart';
 import '../../discover/presentation/category_tabs.dart';
@@ -16,14 +17,15 @@ class OnboardingPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(onboardingPreviewNotifierProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Preview ShortiGo'),
+        title: Text(l10n.previewShortiGo),
         actions: [
           TextButton(
             onPressed: () => context.go('/login'),
-            child: const Text('Sign in'),
+            child: Text(l10n.signIn),
           ),
         ],
       ),
@@ -42,17 +44,15 @@ class OnboardingPage extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Short dramas before you sign up',
+                    l10n.shortDramasBeforeSignup,
                     style: Theme.of(context).textTheme.headlineSmall,
                   ),
                   const SizedBox(height: 8),
-                  const Text(
-                    'Browse categories, then sign in when you are ready to watch.',
-                  ),
+                  Text(l10n.browseCategoriesReady),
                   const SizedBox(height: 12),
                   FilledButton(
                     onPressed: () => context.go('/login'),
-                    child: const Text('Create account or sign in'),
+                    child: Text(l10n.createAccountOrSignIn),
                   ),
                 ],
               ),
@@ -98,7 +98,8 @@ class _EmptyPreview extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    final l10n = AppLocalizations.of(context)!;
+    return Center(
       child: Padding(
         padding: EdgeInsets.all(24),
         child: Column(
@@ -107,7 +108,7 @@ class _EmptyPreview extends StatelessWidget {
             Icon(Icons.movie_filter_outlined, size: 44),
             SizedBox(height: 12),
             Text(
-              'No previews yet',
+              l10n.noPreviewsYet,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 18,
@@ -116,7 +117,7 @@ class _EmptyPreview extends StatelessWidget {
             ),
             SizedBox(height: 6),
             Text(
-              'Check back soon for fresh short dramas.',
+              l10n.checkBackFreshDramas,
               textAlign: TextAlign.center,
             ),
           ],

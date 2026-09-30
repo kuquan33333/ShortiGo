@@ -1,7 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:drift/native.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shortigo/core/providers.dart';
+import 'package:shortigo/data/local/shortigo_database.dart';
 import 'package:shortigo/domain/entities/category.dart';
 import 'package:shortigo/domain/entities/series.dart';
 import 'package:shortigo/domain/entities/user.dart';
@@ -32,36 +34,50 @@ AppUser _user(List<String> favoriteSeriesIds) {
 ProviderContainer _container({
   required _MockSeriesRepository repo,
   required AsyncValue<AppUser?> user,
+  required ShortigoDatabase database,
 }) {
   return ProviderContainer(
     overrides: [
       seriesRepositoryProvider.overrideWithValue(repo),
       currentAppUserDocProvider.overrideWith((_) => Stream.value(user.value)),
+      shortigoDatabaseProvider.overrideWithValue(database),
     ],
   );
 }
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
   late _MockSeriesRepository repo;
 
   setUp(() {
     repo = _MockSeriesRepository();
   });
 
-  test('marks the screen as requiring sign-in when there is no app user',
-      () async {
-    final container = _container(repo: repo, user: const AsyncData(null));
+  test('loads local guest favorites when there is no app user', () async {
+    final database = ShortigoDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(database.close);
+    final container = _container(
+      repo: repo,
+      user: const AsyncData(null),
+      database: database,
+    );
     addTearDown(container.dispose);
 
     final state = await container.read(myListNotifierProvider.future);
 
     expect(state.series, isEmpty);
-    expect(state.requiresSignIn, isTrue);
+    expect(state.requiresSignIn, isFalse);
     verifyNever(() => repo.byId(any()));
   });
 
   test('returns an empty list when user has no saved series', () async {
-    final container = _container(repo: repo, user: AsyncData(_user([])));
+    final database = ShortigoDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(database.close);
+    final container = _container(
+      repo: repo,
+      user: AsyncData(_user([])),
+      database: database,
+    );
     addTearDown(container.dispose);
 
     final state = await container.read(myListNotifierProvider.future);
@@ -74,10 +90,13 @@ void main() {
   test('resolves saved series in favoriteSeriesIds order', () async {
     when(() => repo.byId('s2')).thenAnswer((_) async => _series('s2'));
     when(() => repo.byId('s1')).thenAnswer((_) async => _series('s1'));
+    final database = ShortigoDatabase.forTesting(NativeDatabase.memory());
     final container = _container(
       repo: repo,
       user: AsyncData(_user(['s2', 's1'])),
+      database: database,
     );
+    addTearDown(database.close);
     addTearDown(container.dispose);
 
     final state = await container.read(myListNotifierProvider.future);

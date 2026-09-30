@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/error/friendly_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/loading_view.dart';
 import '../application/episode_player_notifier.dart';
@@ -34,10 +35,11 @@ class EpisodePlayerPage extends ConsumerWidget {
       body: async.when(
         loading: () => const LoadingView(),
         error: (error, _) => ErrorView(
-          error: friendlyErrorFor(error),
+          error: localizedFriendlyErrorFor(context, error),
           onRetry: () => ref.invalidate(episodePlayerNotifierProvider(args)),
         ),
         data: (state) {
+          final l10n = AppLocalizations.of(context)!;
           final user = ref.watch(currentAppUserDocProvider).value;
           final episode = state.episode;
           final access = episode == null
@@ -54,14 +56,14 @@ class EpisodePlayerPage extends ConsumerWidget {
                     color: AppColors.vipGold,
                   ),
                   const SizedBox(height: 16),
-                  const Text(
-                    'This episode is VIP-only',
+                  Text(
+                    l10n.vipEpisode,
                     style: TextStyle(color: Colors.white),
                   ),
                   const SizedBox(height: 16),
                   FilledButton(
                     onPressed: () => context.push('/subscribe'),
-                    child: const Text('Get VIP'),
+                    child: Text(l10n.getVip),
                   ),
                 ],
               ),
@@ -71,6 +73,7 @@ class EpisodePlayerPage extends ConsumerWidget {
             return _BonusUnlock(
               cost: episode!.bonusUnlockCost!,
               balance: user?.bonus ?? 0,
+              l10n: l10n,
               onUnlock: () async {
                 try {
                   await ref
@@ -98,11 +101,13 @@ class _BonusUnlock extends StatelessWidget {
   const _BonusUnlock({
     required this.cost,
     required this.balance,
+    required this.l10n,
     required this.onUnlock,
   });
 
   final int cost;
   final int balance;
+  final AppLocalizations l10n;
   final Future<void> Function() onUnlock;
 
   @override
@@ -120,20 +125,22 @@ class _BonusUnlock extends StatelessWidget {
               color: AppColors.primaryLight,
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Unlock this episode forever',
+            Text(
+              l10n.unlockThisEpisode,
               style: TextStyle(color: Colors.white, fontSize: 18),
             ),
             const SizedBox(height: 8),
             Text(
-              '$cost bonus - Your balance: $balance',
+              l10n.bonusBalance(cost, balance),
               style: const TextStyle(color: AppColors.textSecondary),
             ),
             const SizedBox(height: 16),
             FilledButton.icon(
               onPressed: canAfford ? onUnlock : () => context.go('/rewards'),
               icon: Icon(canAfford ? Icons.bolt : Icons.card_giftcard),
-              label: Text(canAfford ? 'Unlock episode' : 'Earn bonus'),
+              label: Text(
+                canAfford ? l10n.unlockThisEpisode : l10n.earnBonus,
+              ),
             ),
           ],
         ),

@@ -7,6 +7,7 @@ import '../../../core/theme/app_colors.dart';
 import '../../../domain/interfaces/ad_gateway.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/loading_view.dart';
+import '../../../l10n/app_localizations.dart';
 import '../application/reward_progress.dart';
 import '../application/rewards_notifier.dart';
 
@@ -16,13 +17,14 @@ class RewardsPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(rewardsNotifierProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Rewards')),
+      appBar: AppBar(title: Text(l10n.rewards)),
       body: async.when(
         loading: () => const LoadingView(),
         error: (error, _) => ErrorView(
-          error: friendlyErrorFor(error),
+          error: localizedFriendlyErrorFor(context, error),
           onRetry: () => ref.invalidate(rewardsNotifierProvider),
         ),
         data: (state) {
@@ -40,7 +42,7 @@ class RewardsPage extends ConsumerWidget {
               _BonusHeader(bonus: bonus, progress: progress),
               const SizedBox(height: 24),
               _SectionTitle(
-                title: 'Keep your streak alive',
+                title: l10n.keepStreakAlive,
                 trailing: _StreakBadge(
                   active: _claimedToday(user?.lastDailyCheckIn),
                 ),
@@ -61,7 +63,7 @@ class RewardsPage extends ConsumerWidget {
                 },
               ),
               const SizedBox(height: 24),
-              const _SectionTitle(title: 'Achievements'),
+              _SectionTitle(title: l10n.achievements),
               const SizedBox(height: 10),
               _Achievements(bonus: bonus, isVip: user?.isVip ?? false),
               if (state.error != null) ...[
@@ -95,6 +97,7 @@ class _SignInRewards extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -103,8 +106,8 @@ class _SignInRewards extends StatelessWidget {
           children: [
             const Icon(Icons.card_giftcard_outlined, size: 44),
             const SizedBox(height: 12),
-            const Text(
-              'Sign in to earn bonus',
+            Text(
+              l10n.signInToUse,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 18,
@@ -112,14 +115,14 @@ class _SignInRewards extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
-              'Daily check-ins and ad rewards are saved to your wallet.',
+            Text(
+              l10n.guestMessage,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () => context.push('/login'),
-              child: const Text('Sign in'),
+              child: Text(l10n.signIn),
             ),
           ],
         ),
@@ -136,6 +139,7 @@ class _BonusHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -160,7 +164,7 @@ class _BonusHeader extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 8),
-              const Text('Bonus', style: TextStyle(color: Colors.white70)),
+              Text(l10n.bonus, style: const TextStyle(color: Colors.white70)),
             ],
           ),
           const SizedBox(height: 14),
@@ -176,8 +180,10 @@ class _BonusHeader extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             progress.remaining == 0
-                ? 'You have enough to unlock an episode'
-                : '${progress.remaining} bonus until your next episode unlock',
+                ? AppLocalizations.of(context)!.enoughToUnlock
+                : AppLocalizations.of(context)!.bonusUntilNext(
+                    progress.remaining,
+                  ),
             style: const TextStyle(color: Colors.white),
           ),
         ],
@@ -193,11 +199,12 @@ class _DailyCheckIn extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       child: ListTile(
         leading: const Icon(Icons.calendar_today, color: AppColors.primary),
-        title: const Text('Daily check-in'),
-        subtitle: Text(claimed ? 'Claimed today' : '+5 bonus'),
+        title: Text(l10n.dailyCheckIn),
+        subtitle: Text(claimed ? l10n.claimedToday : l10n.bonusFive),
         trailing: FilledButton(
           style: FilledButton.styleFrom(
             minimumSize: const Size(72, 40),
@@ -210,7 +217,7 @@ class _DailyCheckIn extends ConsumerWidget {
                       .read(rewardsNotifierProvider.notifier)
                       .claimDailyCheckIn();
                 },
-          child: Text(claimed ? 'Done' : 'Claim'),
+          child: Text(claimed ? l10n.done : l10n.claim),
         ),
       ),
     );
@@ -232,11 +239,12 @@ class _WatchAd extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Card(
       child: ListTile(
         leading: const Icon(Icons.play_circle_outline, color: AppColors.accent),
-        title: const Text('Watch an ad'),
-        subtitle: Text(_subtitle),
+        title: Text(l10n.watchAnAd),
+        subtitle: Text(_subtitle(l10n)),
         trailing: isWatching
             ? const SizedBox(
                 width: 24,
@@ -249,23 +257,22 @@ class _WatchAd extends StatelessWidget {
                   tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
                 onPressed: status.canShow ? onTap : onRetry,
-                child: Text(status.canShow ? 'Watch' : 'Retry'),
+                child: Text(status.canShow ? l10n.watch : l10n.retry),
               ),
       ),
     );
   }
 
-  String get _subtitle {
+  String _subtitle(AppLocalizations l10n) {
     return switch (status.phase) {
-      AdPhase.ready =>
-        status.isTestAd ? 'Test ad ready · +12 bonus' : '+12 bonus',
-      AdPhase.initializing || AdPhase.loading => 'Preparing an ad...',
-      AdPhase.showing => 'Ad is playing',
-      AdPhase.rewardPending => 'Confirming your reward...',
-      AdPhase.noFill => 'No ad available yet',
-      AdPhase.networkError => 'Check your connection',
-      AdPhase.invalidConfiguration => 'Ad setup needs attention',
-      AdPhase.unavailable => 'Ad unavailable right now',
+      AdPhase.ready => status.isTestAd ? l10n.testAdReady : l10n.bonusTwelve,
+      AdPhase.initializing || AdPhase.loading => l10n.preparingAd,
+      AdPhase.showing => l10n.adPlaying,
+      AdPhase.rewardPending => l10n.confirmingReward,
+      AdPhase.noFill => l10n.noAdAvailable,
+      AdPhase.networkError => l10n.checkConnection,
+      AdPhase.invalidConfiguration => l10n.adSetupNeedsAttention,
+      AdPhase.unavailable => l10n.adUnavailable,
     };
   }
 }
@@ -296,6 +303,7 @@ class _StreakBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
@@ -305,7 +313,7 @@ class _StreakBadge extends StatelessWidget {
           color: active ? AppColors.warning : AppColors.textMuted,
         ),
         const SizedBox(width: 4),
-        Text(active ? 'Active today' : 'Start today'),
+        Text(active ? l10n.activeToday : l10n.startToday),
       ],
     );
   }
@@ -319,12 +327,13 @@ class _Achievements extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Row(
       children: [
         Expanded(
           child: _Achievement(
             icon: Icons.bolt,
-            label: 'First Spark',
+            label: l10n.firstSpark,
             unlocked: bonus > 0,
           ),
         ),
@@ -332,7 +341,7 @@ class _Achievements extends StatelessWidget {
         Expanded(
           child: _Achievement(
             icon: Icons.lock_open,
-            label: 'Unlock ready',
+            label: l10n.unlockReady,
             unlocked: bonus >= 60,
           ),
         ),
@@ -340,7 +349,7 @@ class _Achievements extends StatelessWidget {
         Expanded(
           child: _Achievement(
             icon: Icons.workspace_premium,
-            label: 'VIP viewer',
+            label: l10n.vipViewer,
             unlocked: isVip,
           ),
         ),

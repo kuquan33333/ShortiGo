@@ -6,6 +6,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../domain/entities/episode.dart';
 import '../../../domain/entities/series.dart';
+import '../../../l10n/app_localizations.dart';
 
 /// Frosted series info panel shown above the bottom nav on the Shorts tab.
 class ShortsInfoPanel extends ConsumerWidget {
@@ -269,8 +270,8 @@ class _DescriptionPreview extends StatelessWidget {
               borderRadius: BorderRadius.circular(8),
             ),
           ),
-          child: const Text(
-            'Read More',
+          child: Text(
+            AppLocalizations.of(context)?.readMore ?? 'Read more',
             style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
           ),
         ),

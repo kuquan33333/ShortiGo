@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../domain/entities/series.dart';
+import '../../../l10n/app_localizations.dart';
 
 class SeriesCard extends StatelessWidget {
   const SeriesCard({
@@ -94,7 +95,8 @@ class SeriesCard extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      '${series.episodeCount} EP',
+                      AppLocalizations.of(context)!
+                          .episodeCount(series.episodeCount),
                       style: const TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 12,

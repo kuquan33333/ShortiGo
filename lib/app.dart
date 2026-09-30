@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import 'core/theme/app_theme.dart';
+import 'l10n/app_localizations.dart';
 import 'shared/widgets/app_bottom_nav.dart';
 
 class ShortiGoApp extends StatelessWidget {
@@ -18,6 +19,15 @@ class ShortiGoApp extends StatelessWidget {
       title: 'ShortiGo',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.dark(),
+      localizationsDelegates: AppLocalizations.localizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
+      localeResolutionCallback: (locale, supported) {
+        if (locale == null) return supported.first;
+        return supported.firstWhere(
+          (item) => item.languageCode == locale.languageCode,
+          orElse: () => supported.first,
+        );
+      },
       routerConfig: router,
     );
   }

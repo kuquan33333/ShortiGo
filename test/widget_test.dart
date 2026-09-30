@@ -44,18 +44,20 @@ void main() {
     expect(find.text('Discover'), findsWidgets);
 
     await tester.tap(find.text('Shorts'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
 
     expect(find.text('Shorts'), findsWidgets);
 
     await tester.tap(find.text('My List'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
 
     expect(find.text('My List'), findsWidgets);
-    expect(find.text('Sign in to save series'), findsOneWidget);
 
     await tester.tap(find.text('Profile'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
 
     expect(find.text('Profile'), findsWidgets);
   });

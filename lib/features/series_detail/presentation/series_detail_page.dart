@@ -6,9 +6,11 @@ import 'package:go_router/go_router.dart';
 import '../../../core/error/friendly_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../domain/entities/category.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/loading_view.dart';
 import '../../../shared/widgets/save_series_button.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../episode_player/application/episode_access.dart';
 import '../application/series_detail_notifier.dart';
 
@@ -20,19 +22,20 @@ class SeriesDetailPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(seriesDetailNotifierProvider(seriesId));
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
       body: async.when(
         loading: () => const LoadingView(),
         error: (error, _) => ErrorView(
-          error: friendlyErrorFor(error),
+          error: localizedFriendlyErrorFor(context, error),
           onRetry: () => ref.invalidate(seriesDetailNotifierProvider(seriesId)),
         ),
         data: (state) {
           final series = state.series;
           final user = ref.watch(currentAppUserDocProvider).value;
           if (series == null) {
-            return const Center(child: Text('Series not found'));
+            return Center(child: Text(l10n.seriesNotFound));
           }
 
           return RefreshIndicator(
@@ -80,15 +83,16 @@ class SeriesDetailPage extends ConsumerWidget {
                         ),
                         const SizedBox(height: 4),
                         Text(
-                          '${series.episodeCount} EP - '
-                          '${series.category.displayName}',
+                          '${l10n.episodeCount(series.episodeCount)} - '
+                          '${_categoryLabel(l10n, series.category)}',
                           style:
                               const TextStyle(color: AppColors.textSecondary),
                         ),
                         const SizedBox(height: 8),
                         Text(series.description),
                         const SizedBox(height: 16),
-                        SaveSeriesFilledButton(seriesId: series.id),
+                        SaveSeriesFilledButton(
+                            seriesId: series.id, series: series),
                       ],
                     ),
                   ),
@@ -111,7 +115,9 @@ class SeriesDetailPage extends ConsumerWidget {
                         ),
                       ),
                       title: Text('EP.${episode.order}'),
-                      subtitle: Text('${episode.durationSec}s'),
+                      subtitle: episode.durationSec > 0
+                          ? Text(l10n.durationSeconds(episode.durationSec))
+                          : null,
                       trailing: switch (accessFor(episode, user)) {
                         EpisodeAccessState.vipRequired =>
                           const Icon(Icons.lock, color: AppColors.vipGold),
@@ -151,4 +157,16 @@ class SeriesDetailPage extends ConsumerWidget {
       ),
     );
   }
+}
+
+String _categoryLabel(AppLocalizations l10n, Category category) {
+  return switch (category) {
+    Category.forYou => l10n.forYou,
+    Category.newReleases => l10n.newUpdates,
+    Category.hot => l10n.hot,
+    Category.adventure => l10n.adventure,
+    Category.scary => l10n.scary,
+    Category.anime => l10n.anime,
+    Category.vip => l10n.vip,
+  };
 }

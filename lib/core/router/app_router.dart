@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:sentry_flutter/sentry_flutter.dart';
@@ -12,6 +11,8 @@ import '../../features/my_list/presentation/my_list_page.dart';
 import '../../features/onboarding/presentation/onboarding_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
 import '../../features/rewards/presentation/rewards_page.dart';
+import '../../features/search/presentation/search_page.dart';
+import '../../features/settings/presentation/settings_page.dart';
 import '../../features/series_detail/presentation/series_detail_page.dart';
 import '../../features/shorts/presentation/shorts_page.dart';
 import '../../features/subscription/presentation/subscribe_page.dart';
@@ -24,32 +25,14 @@ GoRouter buildRouter({
   bool requireAuth = false,
   bool Function()? isLoggedIn,
 }) {
-  splashRequireAuth = requireAuth;
-  splashIsLoggedIn = isLoggedIn;
+  // The content shell is always guest-accessible. Keep the parameters for
+  // source compatibility with older tests/callers, but never gate catalog
+  // routes behind Firebase authentication.
+  splashRequireAuth = false;
+  splashIsLoggedIn = null;
   return GoRouter(
     initialLocation: '/splash',
     observers: [_SentryRouteObserver()],
-    redirect: (context, state) {
-      if (!requireAuth) {
-        return null;
-      }
-
-      final loggedIn =
-          isLoggedIn?.call() ?? fb.FirebaseAuth.instance.currentUser != null;
-      final goingToLogin = state.matchedLocation == '/login';
-      final goingToOnboarding = state.matchedLocation == '/onboarding';
-      final goingToSplash = state.matchedLocation == '/splash';
-      if (goingToSplash) {
-        return null;
-      }
-      if (!loggedIn && !goingToLogin && !goingToOnboarding) {
-        return '/onboarding';
-      }
-      if (loggedIn && (goingToLogin || goingToOnboarding)) {
-        return '/discover';
-      }
-      return null;
-    },
     routes: [
       ShellRoute(
         builder: (context, state, child) => AppShell(child: child),
@@ -73,6 +56,10 @@ GoRouter buildRouter({
           GoRoute(
             path: '/profile',
             builder: (_, __) => const ProfilePage(),
+          ),
+          GoRoute(
+            path: '/settings',
+            builder: (_, __) => const SettingsPage(),
           ),
           GoRoute(
             path: '/series/:id',
@@ -104,6 +91,10 @@ GoRouter buildRouter({
       GoRoute(
         path: '/subscribe',
         builder: (_, __) => const SubscribePage(),
+      ),
+      GoRoute(
+        path: '/search',
+        builder: (_, __) => const SearchPage(),
       ),
     ],
   );

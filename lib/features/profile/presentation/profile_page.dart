@@ -1,4 +1,3 @@
-import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/error/friendly_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../domain/entities/transaction.dart';
 import '../../../domain/entities/user.dart';
 import '../../../shared/widgets/error_view.dart';
@@ -24,9 +24,10 @@ class ProfilePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(profileNotifierProvider);
     final deletion = ref.watch(accountDeletionNotifierProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(title: Text(l10n.profile)),
       body: async.when(
         loading: () => const LoadingView(),
         error: (error, _) => ErrorView(
@@ -36,7 +37,7 @@ class ProfilePage extends ConsumerWidget {
         data: (state) {
           final user = state.user;
           if (user == null) {
-            return const Center(child: Text('Sign in to view profile'));
+            return const _GuestProfile();
           }
 
           final initial = _initialFor(user.displayName ?? user.email);
@@ -89,11 +90,11 @@ class ProfilePage extends ConsumerWidget {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceAround,
                     children: [
-                      _WalletCell(label: 'Coins', value: user.coins),
-                      _WalletCell(label: 'Bonus', value: user.bonus),
+                      _WalletCell(label: l10n.coins, value: user.coins),
+                      _WalletCell(label: l10n.bonus, value: user.bonus),
                       _WalletCell(
-                        label: 'VIP',
-                        value: user.isVip ? 'Yes' : 'No',
+                        label: l10n.vip,
+                        value: user.isVip ? l10n.yes : l10n.no,
                       ),
                     ],
                   ),
@@ -106,7 +107,7 @@ class ProfilePage extends ConsumerWidget {
                     child: _SnapshotCell(
                       icon: Icons.bookmark,
                       value: '${user.favoriteSeriesIds.length}',
-                      label: 'Saved',
+                      label: l10n.saved,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -114,7 +115,7 @@ class ProfilePage extends ConsumerWidget {
                     child: _SnapshotCell(
                       icon: Icons.bolt,
                       value: '$rewardsEarned',
-                      label: 'Earned',
+                      label: l10n.earned,
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -122,15 +123,15 @@ class ProfilePage extends ConsumerWidget {
                     child: _SnapshotCell(
                       icon: Icons.lock_open,
                       value: '${user.unlockedEpisodeIds.length}',
-                      label: 'Unlocked',
+                      label: l10n.unlocked,
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 24),
               if (state.transactions.isNotEmpty) ...[
-                const Text(
-                  'Recent activity',
+                Text(
+                  l10n.recentActivity,
                   style: TextStyle(color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: 8),
@@ -162,9 +163,15 @@ class ProfilePage extends ConsumerWidget {
                 const SizedBox(height: 16),
                 FilledButton(
                   onPressed: () => context.push('/subscribe'),
-                  child: const Text('Get VIP'),
+                  child: Text(l10n.getVip),
                 ),
               ],
+              const SizedBox(height: 16),
+              ListTile(
+                leading: const Icon(Icons.settings_outlined),
+                title: Text(l10n.settings),
+                onTap: () => context.push('/settings'),
+              ),
               const SizedBox(height: 16),
               AccountActionsSection(
                 isDeleting: deletion.isDeleting,
@@ -195,8 +202,8 @@ class ProfilePage extends ConsumerWidget {
               ),
               const SizedBox(height: 16),
               FilledButton.tonal(
-                onPressed: () async => fb.FirebaseAuth.instance.signOut(),
-                child: const Text('Sign out'),
+                onPressed: () async => ref.read(firebaseAuthProvider).signOut(),
+                child: Text(l10n.signOut),
               ),
             ],
           );
@@ -223,6 +230,45 @@ class ProfilePage extends ConsumerWidget {
   }
 }
 
+class _GuestProfile extends StatelessWidget {
+  const _GuestProfile();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return ListView(
+      padding: const EdgeInsets.all(24),
+      children: [
+        const Icon(Icons.person_outline, size: 64),
+        const SizedBox(height: 16),
+        Text(
+          l10n.guestMode,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.headlineSmall,
+        ),
+        const SizedBox(height: 8),
+        Text(l10n.guestMessage, textAlign: TextAlign.center),
+        const SizedBox(height: 20),
+        FilledButton(
+          onPressed: () => context.push('/login'),
+          child: Text(l10n.signIn),
+        ),
+        const SizedBox(height: 8),
+        OutlinedButton(
+          onPressed: () => context.push('/login'),
+          child: Text(l10n.createAccount),
+        ),
+        const SizedBox(height: 24),
+        ListTile(
+          leading: const Icon(Icons.settings_outlined),
+          title: Text(l10n.settings),
+          onTap: () => context.push('/settings'),
+        ),
+      ],
+    );
+  }
+}
+
 class _ViewerStatus extends StatelessWidget {
   const _ViewerStatus({required this.user});
 
@@ -230,6 +276,7 @@ class _ViewerStatus extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -252,11 +299,9 @@ class _ViewerStatus extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(user.isVip ? 'VIP viewer' : 'Free viewer'),
+                Text(user.isVip ? l10n.vipViewer : l10n.freeViewer),
                 Text(
-                  user.isVip
-                      ? 'Every VIP episode is open'
-                      : 'Earn bonus to unlock selected episodes',
+                  user.isVip ? l10n.vipEpisodeOpen : l10n.bonusSelectedEpisodes,
                   style: const TextStyle(color: AppColors.textSecondary),
                 ),
               ],
@@ -304,6 +349,7 @@ class _AdDiagnostics extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final l10n = AppLocalizations.of(context)!;
     final gateway = ref.watch(adGatewayProvider);
     final status =
         ref.watch(adStatusProvider).valueOrNull ?? gateway.currentStatus;
@@ -313,10 +359,10 @@ class _AdDiagnostics extends ConsumerWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text('Ad diagnostics'),
+            Text(l10n.adDiagnostics),
             const SizedBox(height: 6),
             Text(
-              '${status.phase.name}${status.isTestAd ? ' · test mode' : ''}',
+              '${status.phase.name}${status.isTestAd ? ' · ${l10n.testMode}' : ''}',
               style: const TextStyle(color: AppColors.textSecondary),
             ),
             if (status.message != null) ...[
@@ -329,13 +375,13 @@ class _AdDiagnostics extends ConsumerWidget {
                 OutlinedButton.icon(
                   onPressed: () => gateway.preloadRewarded(),
                   icon: const Icon(Icons.refresh),
-                  label: const Text('Retry'),
+                  label: Text(l10n.retry),
                 ),
                 const SizedBox(width: 8),
                 OutlinedButton.icon(
                   onPressed: () => gateway.openAdInspector(),
                   icon: const Icon(Icons.troubleshoot),
-                  label: const Text('Inspector'),
+                  label: Text(l10n.inspector),
                 ),
               ],
             ),

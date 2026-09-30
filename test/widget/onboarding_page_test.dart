@@ -25,7 +25,7 @@ class _FakeSeriesRepository implements SeriesRepository {
 }
 
 void main() {
-  testWidgets('logged-out protected routes land on onboarding preview', (
+  testWidgets('guest boot lands on discover without login redirect', (
     tester,
   ) async {
     await tester.pumpWidget(
@@ -43,8 +43,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Preview ShortiGo'), findsOneWidget);
-    expect(find.text('No previews yet'), findsOneWidget);
-    expect(find.text('Sign in'), findsOneWidget);
+    expect(find.text('Discover'), findsWidgets);
+    expect(find.text('Preview ShortiGo'), findsNothing);
   });
 }

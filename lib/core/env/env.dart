@@ -14,6 +14,7 @@ class Env {
     required this.revenueCatApiKeyIos,
     required this.revenueCatApiKeyAndroid,
     required this.rewardApiBaseUrl,
+    required this.contentApiBaseUrl,
   });
 
   final AppFlavor flavor;
@@ -26,6 +27,7 @@ class Env {
   final String revenueCatApiKeyIos;
   final String revenueCatApiKeyAndroid;
   final String rewardApiBaseUrl;
+  final String contentApiBaseUrl;
 
   bool get isProd => flavor == AppFlavor.prod;
 
@@ -50,6 +52,7 @@ class Env {
     String revenueCatApiKeyIos = '',
     String revenueCatApiKeyAndroid = '',
     String rewardApiBaseUrl = '',
+    String contentApiBaseUrl = '',
   }) {
     return Env._(
       flavor: flavor,
@@ -62,6 +65,7 @@ class Env {
       revenueCatApiKeyIos: revenueCatApiKeyIos,
       revenueCatApiKeyAndroid: revenueCatApiKeyAndroid,
       rewardApiBaseUrl: rewardApiBaseUrl,
+      contentApiBaseUrl: contentApiBaseUrl,
     );
   }
 
@@ -151,6 +155,10 @@ class Env {
       ),
       rewardApiBaseUrl: const String.fromEnvironment(
         'REWARD_API_BASE_URL',
+        defaultValue: '',
+      ),
+      contentApiBaseUrl: const String.fromEnvironment(
+        'CONTENT_API_BASE_URL',
         defaultValue: '',
       ),
     );

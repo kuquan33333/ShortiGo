@@ -9,6 +9,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/error/friendly_error.dart';
 import '../../../core/providers.dart';
 import '../../../domain/entities/episode.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/loading_view.dart';
 import '../../episode_player/application/episode_access.dart';
@@ -115,15 +116,16 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
       body: async.when(
         loading: () => const LoadingView(),
         error: (error, _) => ErrorView(
-          error: friendlyErrorFor(error),
+          error: localizedFriendlyErrorFor(context, error),
           onRetry: () => ref.invalidate(shortsFeedNotifierProvider),
         ),
         data: (state) {
+          final l10n = AppLocalizations.of(context)!;
           final user = ref.watch(currentAppUserDocProvider).value;
           if (state.episodes.isEmpty) {
-            return const Center(
+            return Center(
               child: Text(
-                'No shorts yet',
+                l10n.noShorts,
                 style: TextStyle(color: Colors.white),
               ),
             );

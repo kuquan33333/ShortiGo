@@ -1,13 +1,11 @@
 import 'dart:async';
 
-import 'package:firebase_auth/firebase_auth.dart' as fb;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../bootstrap/app_warmup.dart';
-import '../../../core/router/app_router.dart';
 import 'shortigo_vortex_splash.dart';
 
 /// Branded vortex splash shown on cold start before routing into the app.
@@ -47,12 +45,7 @@ class _SplashPageState extends ConsumerState<SplashPage>
   }
 
   String _nextRouteAfterSplash() {
-    if (!splashRequireAuth) {
-      return '/discover';
-    }
-    final loggedIn = splashIsLoggedIn?.call() ??
-        fb.FirebaseAuth.instance.currentUser != null;
-    return loggedIn ? '/discover' : '/onboarding';
+    return '/discover';
   }
 
   @override

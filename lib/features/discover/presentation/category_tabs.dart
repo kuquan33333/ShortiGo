@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 import '../../../domain/entities/category.dart';
+import '../../../l10n/app_localizations.dart';
 
 class CategoryTabs extends StatelessWidget {
   const CategoryTabs({
@@ -27,7 +28,7 @@ class CategoryTabs extends StatelessWidget {
           final selected = category == current;
 
           return ChoiceChip(
-            label: Text(category.displayName),
+            label: Text(_label(context, category)),
             selected: selected,
             onSelected: (_) => onSelect(category),
             selectedColor: AppColors.primary,
@@ -44,5 +45,18 @@ class CategoryTabs extends StatelessWidget {
         },
       ),
     );
+  }
+
+  String _label(BuildContext context, Category category) {
+    final l10n = AppLocalizations.of(context)!;
+    return switch (category) {
+      Category.forYou => l10n.forYou,
+      Category.newReleases => l10n.newUpdates,
+      Category.hot => l10n.hot,
+      Category.adventure => l10n.adventure,
+      Category.scary => l10n.scary,
+      Category.anime => l10n.anime,
+      Category.vip => l10n.vip,
+    };
   }
 }

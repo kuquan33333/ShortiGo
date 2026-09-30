@@ -13,6 +13,7 @@ import 'package:shortigo/domain/interfaces/series_repository.dart';
 import 'package:shortigo/domain/interfaces/social_actions_gateway.dart';
 import 'package:shortigo/domain/interfaces/user_repository.dart';
 import 'package:shortigo/features/series_detail/presentation/series_detail_page.dart';
+import 'package:shortigo/l10n/app_localizations.dart';
 
 class _MockUserRepository extends Mock implements UserRepository {}
 
@@ -79,7 +80,9 @@ Future<void> _pumpPage(
         socialActionsGatewayProvider.overrideWithValue(socialActionsGateway),
         currentAppUserDocProvider.overrideWith((_) => Stream.value(user)),
       ],
-      child: const MaterialApp(
+      child: MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: SeriesDetailPage(seriesId: 's1'),
       ),
     ),
@@ -120,7 +123,11 @@ Future<void> _pumpRoutedPage(
         ),
         currentAppUserDocProvider.overrideWith((_) => Stream.value(user)),
       ],
-      child: MaterialApp.router(routerConfig: router),
+      child: MaterialApp.router(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
+        routerConfig: router,
+      ),
     ),
   );
   await tester.pumpAndSettle();
@@ -187,7 +194,7 @@ void main() {
     ).called(1);
   });
 
-  testWidgets('routes signed-out save attempts to login', (tester) async {
+  testWidgets('allows signed-out users to save locally', (tester) async {
     final userRepository = _MockUserRepository();
 
     await _pumpRoutedPage(
@@ -199,8 +206,8 @@ void main() {
     expect(find.text('Save'), findsOneWidget);
 
     await tester.tap(find.text('Save'));
-    await tester.pumpAndSettle();
+    await tester.pump();
 
-    expect(find.text('Login screen'), findsOneWidget);
+    expect(find.text('Login screen'), findsNothing);
   });
 }

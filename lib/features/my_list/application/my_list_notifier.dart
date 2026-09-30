@@ -18,7 +18,9 @@ class MyListNotifier extends AsyncNotifier<MyListState> {
   Future<MyListState> build() async {
     final user = await ref.watch(currentAppUserDocProvider.future);
     if (user == null) {
-      return const MyListState(requiresSignIn: true);
+      final guestSeries =
+          await ref.read(guestFavoritesRepositoryProvider).list();
+      return MyListState(series: guestSeries);
     }
 
     final favoriteSeriesIds = user.favoriteSeriesIds;

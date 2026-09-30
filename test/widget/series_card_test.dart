@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shortigo/domain/entities/category.dart';
 import 'package:shortigo/domain/entities/series.dart';
 import 'package:shortigo/features/discover/presentation/series_card.dart';
+import 'package:shortigo/l10n/app_localizations.dart';
 
 void main() {
   testWidgets('SeriesCard shows title and EP count', (tester) async {
@@ -10,6 +11,8 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: AppLocalizations.localizationsDelegates,
+        supportedLocales: AppLocalizations.supportedLocales,
         home: Scaffold(
           body: SizedBox(
             width: 200,
@@ -31,7 +34,7 @@ void main() {
     );
 
     expect(find.text('My Show'), findsOneWidget);
-    expect(find.text('21 EP'), findsOneWidget);
+    expect(find.text('21 episodes'), findsOneWidget);
 
     await tester.tap(find.byType(SeriesCard));
 

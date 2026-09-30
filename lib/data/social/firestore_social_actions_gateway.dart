@@ -36,9 +36,11 @@ class FirestoreSocialActionsGateway implements SocialActionsGateway {
             ? FieldValue.arrayUnion([episodeId])
             : FieldValue.arrayRemove([episodeId]),
       });
-      transaction.update(episodeRef, {
-        'likeCount': _nextCount(episode.data()?['likeCount'], liked ? 1 : -1),
-      });
+      if (episode.exists) {
+        transaction.update(episodeRef, {
+          'likeCount': _nextCount(episode.data()?['likeCount'], liked ? 1 : -1),
+        });
+      }
     });
   }
 
@@ -66,9 +68,14 @@ class FirestoreSocialActionsGateway implements SocialActionsGateway {
             ? FieldValue.arrayUnion([seriesId])
             : FieldValue.arrayRemove([seriesId]),
       });
-      transaction.update(seriesRef, {
-        'saveCount': _nextCount(series.data()?['saveCount'], saved ? 1 : -1),
-      });
+      // Catalog metadata now comes from the Content API. The account
+      // preference remains in Firestore, while the old catalog counter is
+      // updated only when a legacy Firestore series document still exists.
+      if (series.exists) {
+        transaction.update(seriesRef, {
+          'saveCount': _nextCount(series.data()?['saveCount'], saved ? 1 : -1),
+        });
+      }
     });
   }
 
@@ -77,9 +84,11 @@ class FirestoreSocialActionsGateway implements SocialActionsGateway {
     final episodeRef = _db.collection('episodes').doc(episodeId);
     return _db.runTransaction((transaction) async {
       final episode = await transaction.get(episodeRef);
-      transaction.update(episodeRef, {
-        'shareCount': _nextCount(episode.data()?['shareCount'], 1),
-      });
+      if (episode.exists) {
+        transaction.update(episodeRef, {
+          'shareCount': _nextCount(episode.data()?['shareCount'], 1),
+        });
+      }
     });
   }
 
@@ -107,10 +116,12 @@ class FirestoreSocialActionsGateway implements SocialActionsGateway {
             ? FieldValue.arrayUnion([seriesId])
             : FieldValue.arrayRemove([seriesId]),
       });
-      transaction.update(seriesRef, {
-        'followerCount':
-            _nextCount(series.data()?['followerCount'], followed ? 1 : -1),
-      });
+      if (series.exists) {
+        transaction.update(seriesRef, {
+          'followerCount':
+              _nextCount(series.data()?['followerCount'], followed ? 1 : -1),
+        });
+      }
     });
   }
 

@@ -1,22 +1,31 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../core/providers.dart';
 import '../../core/theme/app_colors.dart';
 import '../../domain/entities/user.dart';
+import '../../domain/entities/series.dart';
+import '../../features/my_list/application/my_list_notifier.dart';
+import '../../l10n/app_localizations.dart';
 
 Future<void> toggleSeriesSaved({
   required BuildContext context,
   required WidgetRef ref,
   required String seriesId,
+  Series? series,
   required AppUser? user,
   required bool isSaved,
 }) async {
   if (user == null) {
-    unawaited(context.push('/login'));
+    if (series == null) return;
+    final favorites = ref.read(guestFavoritesRepositoryProvider);
+    if (isSaved) {
+      await favorites.remove(seriesId);
+    } else {
+      await favorites.save(series);
+    }
+    ref.invalidate(guestFavoriteSavedProvider(seriesId));
+    ref.invalidate(myListNotifierProvider);
     return;
   }
 
@@ -33,25 +42,31 @@ Future<void> toggleSeriesSaved({
 
 /// Full-width save button for series detail.
 class SaveSeriesFilledButton extends ConsumerWidget {
-  const SaveSeriesFilledButton({super.key, required this.seriesId});
+  const SaveSeriesFilledButton(
+      {super.key, required this.seriesId, this.series});
 
   final String seriesId;
+  final Series? series;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentAppUserDocProvider).value;
-    final isSaved = user?.favoriteSeriesIds.contains(seriesId) ?? false;
+    final guestSaved =
+        ref.watch(guestFavoriteSavedProvider(seriesId)).value ?? false;
+    final isSaved = user?.favoriteSeriesIds.contains(seriesId) ?? guestSaved;
+    final l10n = AppLocalizations.of(context)!;
 
     return FilledButton.icon(
       onPressed: () => toggleSeriesSaved(
         context: context,
         ref: ref,
         seriesId: seriesId,
+        series: series,
         user: user,
         isSaved: isSaved,
       ),
       icon: Icon(isSaved ? Icons.bookmark : Icons.bookmark_outline),
-      label: Text(isSaved ? 'Saved' : 'Save'),
+      label: Text(isSaved ? l10n.saved : l10n.save),
     );
   }
 }
@@ -61,16 +76,20 @@ class SaveSeriesCircleButton extends ConsumerWidget {
   const SaveSeriesCircleButton({
     super.key,
     required this.seriesId,
+    this.series,
     this.countLabel = 'SAVE',
   });
 
   final String seriesId;
+  final Series? series;
   final String countLabel;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final user = ref.watch(currentAppUserDocProvider).value;
-    final isSaved = user?.favoriteSeriesIds.contains(seriesId) ?? false;
+    final guestSaved =
+        ref.watch(guestFavoriteSavedProvider(seriesId)).value ?? false;
+    final isSaved = user?.favoriteSeriesIds.contains(seriesId) ?? guestSaved;
 
     return _GlassActionButton(
       icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
@@ -79,6 +98,7 @@ class SaveSeriesCircleButton extends ConsumerWidget {
         context: context,
         ref: ref,
         seriesId: seriesId,
+        series: series,
         user: user,
         isSaved: isSaved,
       ),

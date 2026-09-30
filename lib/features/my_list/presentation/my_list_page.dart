@@ -6,6 +6,7 @@ import '../../../core/error/friendly_error.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/loading_view.dart';
 import '../../discover/presentation/series_card.dart';
+import '../../../l10n/app_localizations.dart';
 import '../application/my_list_notifier.dart';
 
 class MyListPage extends ConsumerWidget {
@@ -14,13 +15,14 @@ class MyListPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(myListNotifierProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My List')),
+      appBar: AppBar(title: Text(l10n.myList)),
       body: async.when(
         loading: () => const LoadingView(),
         error: (error, _) => ErrorView(
-          error: friendlyErrorFor(error),
+          error: localizedFriendlyErrorFor(context, error),
           onRetry: () => ref.invalidate(myListNotifierProvider),
         ),
         data: (state) {
@@ -60,6 +62,7 @@ class _SignInMyList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -68,23 +71,23 @@ class _SignInMyList extends StatelessWidget {
           children: [
             const Icon(Icons.bookmark_add_outlined, size: 44),
             const SizedBox(height: 12),
-            const Text(
-              'Sign in to save series',
+            Text(
+              l10n.signInToUse,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w700,
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
-              'Your saved series will stay synced on this device.',
+            Text(
+              l10n.saveSeriesHint,
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () => context.push('/login'),
-              child: const Text('Sign in'),
+              child: Text(l10n.signIn),
             ),
           ],
         ),
@@ -98,7 +101,8 @@ class _EmptyMyList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
+    final l10n = AppLocalizations.of(context)!;
+    return Center(
       child: Padding(
         padding: EdgeInsets.all(24),
         child: Column(
@@ -107,7 +111,7 @@ class _EmptyMyList extends StatelessWidget {
             Icon(Icons.bookmark_outline, size: 44),
             SizedBox(height: 12),
             Text(
-              'No saved series yet',
+              l10n.noSavedSeries,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 18,
@@ -116,7 +120,7 @@ class _EmptyMyList extends StatelessWidget {
             ),
             SizedBox(height: 6),
             Text(
-              'Save a series and it will appear here.',
+              l10n.saveSeriesHint,
               textAlign: TextAlign.center,
             ),
           ],

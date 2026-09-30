@@ -7,10 +7,12 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../core/error/friendly_error.dart';
 import '../../../core/providers.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../../domain/entities/episode.dart';
 import '../../../domain/entities/series.dart';
 import '../../../domain/entities/user.dart';
 import '../../../shared/format/compact_count.dart';
+import '../../my_list/application/my_list_notifier.dart';
 import '../application/shorts_share_link.dart';
 
 class ShortsActionRail extends ConsumerStatefulWidget {
@@ -85,7 +87,7 @@ class _ShortsActionRailState extends ConsumerState<ShortsActionRail> {
           const SizedBox(height: 11),
           _RailButton(
             icon: Icons.chat_bubble_outline,
-            label: 'Info',
+            label: AppLocalizations.of(context)!.info,
             onTap: () => context.push('/series/${widget.series.id}'),
           ),
           const SizedBox(height: 11),
@@ -130,12 +132,22 @@ class _ShortsActionRailState extends ConsumerState<ShortsActionRail> {
   }
 
   Future<void> _toggleSave(AppUser? user, bool saved) async {
-    if (!_requireUser(user)) return;
     final next = !saved;
     setState(() {
       _saved = next;
       _saveCount = (_saveCount + (next ? 1 : -1)).clamp(0, 1 << 31);
     });
+    if (user == null) {
+      final favorites = ref.read(guestFavoritesRepositoryProvider);
+      if (next) {
+        await favorites.save(widget.series);
+      } else {
+        await favorites.remove(widget.series.id);
+      }
+      ref.invalidate(guestFavoriteSavedProvider(widget.series.id));
+      ref.invalidate(myListNotifierProvider);
+      return;
+    }
     try {
       await ref.read(socialActionsGatewayProvider).setSeriesSaved(
             seriesId: widget.series.id,
@@ -180,9 +192,11 @@ class _ShortsActionRailState extends ConsumerState<ShortsActionRail> {
               box == null ? null : box.localToGlobal(Offset.zero) & box.size,
         ),
       );
-      await ref
-          .read(socialActionsGatewayProvider)
-          .recordEpisodeShare(episodeId: widget.episode.id);
+      if (ref.read(currentAppUserDocProvider).value != null) {
+        await ref
+            .read(socialActionsGatewayProvider)
+            .recordEpisodeShare(episodeId: widget.episode.id);
+      }
     } catch (error) {
       _showError(error);
     }

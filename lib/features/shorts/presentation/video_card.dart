@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../domain/entities/episode.dart';
+import '../../../l10n/app_localizations.dart';
 import '../../episode_player/application/episode_access.dart';
 
 /// Loading/error overlay for a Shorts page. Video playback is handled by [ShortsPage].
@@ -30,26 +31,29 @@ class VideoCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
     return Stack(
       fit: StackFit.expand,
       children: [
         if (isActive && access == EpisodeAccessState.vipRequired)
           _LockedOverlay(
             icon: Icons.workspace_premium_rounded,
-            title: 'VIP episode',
-            subtitle: 'Upgrade to watch this short.',
-            buttonLabel: 'Go to rewards',
+            title: l10n.vipEpisode,
+            subtitle: l10n.upgradeToWatch,
+            buttonLabel: l10n.goToRewards,
             onPressed: onEarnBonus,
           )
         else if (isActive && access == EpisodeAccessState.bonusRequired)
           _LockedOverlay(
             icon: Icons.lock_open_rounded,
-            title: 'Unlock this episode',
-            subtitle:
-                '${episode.bonusUnlockCost ?? 0} bonus - Your balance: $bonusBalance',
+            title: l10n.unlockThisEpisode,
+            subtitle: l10n.bonusBalance(
+              episode.bonusUnlockCost ?? 0,
+              bonusBalance,
+            ),
             buttonLabel: bonusBalance >= (episode.bonusUnlockCost ?? 0)
-                ? 'Unlock episode'
-                : 'Earn bonus',
+                ? l10n.unlockThisEpisode
+                : l10n.earnBonus,
             onPressed: bonusBalance >= (episode.bonusUnlockCost ?? 0)
                 ? onUnlock
                 : onEarnBonus,
@@ -60,7 +64,7 @@ class VideoCard extends StatelessWidget {
             child: Center(
               child: FilledButton(
                 onPressed: onRetry,
-                child: const Text('Tap to retry'),
+                child: Text(l10n.tapToRetry),
               ),
             ),
           )

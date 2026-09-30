@@ -36,6 +36,61 @@ class ShortigoDatabase extends _$ShortigoDatabase {
   @override
   int get schemaVersion => 1;
 
+  Future<String?> readSetting(String key) async {
+    final row = await (select(cachedSeries)
+          ..where((table) => table.id.equals(_settingId(key))))
+        .getSingleOrNull();
+    return row == null ? null : String.fromCharCodes(row.payload);
+  }
+
+  Future<void> writeSetting(String key, String value) {
+    return into(cachedSeries).insertOnConflictUpdate(
+      CachedSeriesCompanion.insert(
+        id: _settingId(key),
+        payload: Uint8List.fromList(value.codeUnits),
+        cachedAt: DateTime.now().toUtc(),
+        category: 'settings',
+      ),
+    );
+  }
+
+  Future<List<CachedSeriesRow>> readGuestFavorites() {
+    return (select(cachedSeries)
+          ..where((table) => table.category.equals('guest-favorite'))
+          ..orderBy([(row) => OrderingTerm.desc(row.cachedAt)]))
+        .get();
+  }
+
+  Future<void> writeGuestFavorite({
+    required String seriesId,
+    required Uint8List payload,
+  }) {
+    return into(cachedSeries).insertOnConflictUpdate(
+      CachedSeriesCompanion.insert(
+        id: _guestFavoriteId(seriesId),
+        payload: payload,
+        cachedAt: DateTime.now().toUtc(),
+        category: 'guest-favorite',
+      ),
+    );
+  }
+
+  Future<void> deleteGuestFavorite(String seriesId) {
+    return (delete(cachedSeries)
+          ..where((row) => row.id.equals(_guestFavoriteId(seriesId))))
+        .go();
+  }
+
+  Future<bool> hasGuestFavorite(String seriesId) async {
+    final row = await (select(cachedSeries)
+          ..where((table) => table.id.equals(_guestFavoriteId(seriesId))))
+        .getSingleOrNull();
+    return row != null;
+  }
+
+  static String _settingId(String key) => '__setting__:$key';
+  static String _guestFavoriteId(String seriesId) => '__guest__:$seriesId';
+
   static LazyDatabase _openConnection() {
     return LazyDatabase(() async {
       final dir = await getApplicationDocumentsDirectory();

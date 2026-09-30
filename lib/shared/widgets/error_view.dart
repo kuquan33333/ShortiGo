@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../core/error/friendly_error.dart';
+import '../../l10n/app_localizations.dart';
 
 class ErrorView extends StatelessWidget {
   const ErrorView({super.key, required this.error, this.onRetry});
@@ -8,6 +9,7 @@ class ErrorView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24),
@@ -21,7 +23,10 @@ class ErrorView extends StatelessWidget {
             Text(error.message, textAlign: TextAlign.center),
             if (onRetry != null) ...[
               const SizedBox(height: 16),
-              FilledButton(onPressed: onRetry, child: const Text('Try again')),
+              FilledButton(
+                onPressed: onRetry,
+                child: Text(l10n?.tryAgain ?? 'Try again'),
+              ),
             ],
           ],
         ),

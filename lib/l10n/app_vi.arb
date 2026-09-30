@@ -1,0 +1,115 @@
+{
+  "@@locale": "vi",
+  "appTitle": "ShortiGo",
+  "discover": "Khám phá",
+  "shorts": "Phim ngắn",
+  "rewards": "Phần thưởng",
+  "myList": "Danh sách của tôi",
+  "profile": "Tài khoản",
+  "settings": "Cài đặt",
+  "contentSource": "Nguồn nội dung",
+  "contentApiServer": "Máy chủ API phim",
+  "testConnection": "Kiểm tra kết nối",
+  "save": "Lưu",
+  "saved": "Đã lưu",
+  "restoreDefault": "Khôi phục mặc định",
+  "serverStatus": "Trạng thái máy chủ",
+  "active": "Hoạt động",
+  "unavailable": "Không khả dụng",
+  "notConfigured": "Chưa cấu hình",
+  "language": "Ngôn ngữ",
+  "providers": "Nguồn phim",
+  "search": "Tìm kiếm",
+  "searchHint": "Tìm phim ngắn",
+  "noResults": "Không tìm thấy kết quả.",
+  "noShorts": "Chưa có phim ngắn.",
+  "seriesNotFound": "Không tìm thấy phim.",
+  "noSavedSeries": "Bạn chưa lưu phim nào.",
+  "saveSeriesHint": "Phim đã lưu sẽ xuất hiện ở đây.",
+  "signIn": "Đăng nhập",
+  "createAccount": "Đăng ký",
+  "createAccountOrSignIn": "Đăng ký hoặc đăng nhập",
+  "continueWithGoogle": "Tiếp tục với Google",
+  "guestMode": "Chế độ Khách",
+  "guestMessage": "Bạn đang dùng ShortiGo ở chế độ Khách.",
+  "signInToUse": "Đăng nhập để sử dụng tính năng này.",
+  "accountServiceUnavailable": "Dịch vụ tài khoản hiện chưa được cấu hình.",
+  "signOut": "Đăng xuất",
+  "tryAgain": "Thử lại",
+  "sourceLocked": "Tập này hiện chưa có nguồn phát công khai.",
+  "episodeCount": "{count} tập",
+  "forYou": "Dành cho bạn",
+  "newUpdates": "Mới cập nhật",
+  "hot": "Thịnh hành",
+  "adventure": "Phiêu lưu",
+  "scary": "Kinh dị",
+  "anime": "Hoạt hình",
+  "vip": "VIP",
+  "durationSeconds": "{seconds} giây",
+  "unknownDuration": "",
+  "accountAndSubscription": "Tài khoản và gói dịch vụ",
+  "restorePurchases": "Khôi phục giao dịch mua",
+  "deleteAccount": "Xóa tài khoản",
+  "bonus": "Điểm thưởng",
+  "coins": "Xu",
+  "vipViewer": "Thành viên VIP",
+  "freeViewer": "Tài khoản thường",
+  "dailyCheckIn": "Điểm danh hằng ngày",
+  "watchAnAd": "Xem quảng cáo nhận thưởng",
+  "achievements": "Thành tựu",
+  "done": "Đã xong",
+  "claim": "Nhận",
+  "retry": "Thử lại",
+  "info": "Thông tin",
+  "readMore": "Đọc thêm",
+  "email": "Email",
+  "password": "Mật khẩu",
+  "browseAsGuest": "Tiếp tục với tư cách Khách"
+  ,"cancel": "Hủy"
+  ,"earned": "Đã nhận"
+  ,"unlocked": "Đã mở khóa"
+  ,"recentActivity": "Hoạt động gần đây"
+  ,"getVip": "Nâng cấp VIP"
+  ,"yes": "Có"
+  ,"no": "Không"
+  ,"deleteAccountPrompt": "Xóa tài khoản ShortiGo?"
+  ,"deleteAccountDescription": "Hồ sơ, Danh sách của tôi và hoạt động xem phim sẽ bị xóa vĩnh viễn."
+  ,"contentServerSlow": "Máy chủ phim phản hồi quá lâu."
+  ,"contentServerUnavailable": "Không thể kết nối tới máy chủ phim."
+  ,"keepStreakAlive": "Duy trì chuỗi điểm danh"
+  ,"enoughToUnlock": "Bạn đã đủ điểm để mở khóa một tập"
+  ,"bonusUntilNext": "Còn {count} điểm để mở khóa tập tiếp theo"
+  ,"claimedToday": "Đã nhận hôm nay"
+  ,"bonusFive": "+5 điểm"
+  ,"watch": "Xem"
+  ,"testAdReady": "Quảng cáo thử nghiệm sẵn sàng · +12 điểm"
+  ,"bonusTwelve": "+12 điểm"
+  ,"preparingAd": "Đang chuẩn bị quảng cáo..."
+  ,"adPlaying": "Quảng cáo đang phát"
+  ,"confirmingReward": "Đang xác nhận phần thưởng..."
+  ,"noAdAvailable": "Chưa có quảng cáo"
+  ,"checkConnection": "Kiểm tra kết nối"
+  ,"adSetupNeedsAttention": "Cần kiểm tra cấu hình quảng cáo"
+  ,"adUnavailable": "Quảng cáo hiện không khả dụng"
+  ,"activeToday": "Đang hoạt động hôm nay"
+  ,"startToday": "Bắt đầu hôm nay"
+  ,"firstSpark": "Tia sáng đầu tiên"
+  ,"unlockReady": "Sẵn sàng mở khóa"
+  ,"vipEpisode": "Tập VIP"
+  ,"upgradeToWatch": "Nâng cấp để xem short này."
+  ,"goToRewards": "Đến mục phần thưởng"
+  ,"unlockThisEpisode": "Mở khóa tập này"
+  ,"bonusBalance": "{cost} điểm · Số dư của bạn: {balance}"
+  ,"earnBonus": "Kiếm điểm"
+  ,"tapToRetry": "Chạm để thử lại"
+  ,"previewShortiGo": "Xem trước ShortiGo"
+  ,"shortDramasBeforeSignup": "Xem drama ngắn trước khi đăng ký"
+  ,"browseCategoriesReady": "Khám phá danh mục, rồi đăng nhập khi bạn sẵn sàng xem."
+  ,"noPreviewsYet": "Chưa có nội dung xem trước"
+  ,"checkBackFreshDramas": "Hãy quay lại sau để xem các drama ngắn mới."
+  ,"vipEpisodeOpen": "Mọi tập VIP đều đã mở khóa"
+  ,"bonusSelectedEpisodes": "Kiếm điểm để mở khóa các tập được chọn"
+  ,"adDiagnostics": "Chẩn đoán quảng cáo"
+  ,"testMode": "chế độ thử nghiệm"
+  ,"inspector": "Trình kiểm tra"
+}

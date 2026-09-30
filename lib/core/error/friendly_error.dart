@@ -1,4 +1,7 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+
+import '../../data/remote/content_api_models.dart';
+import '../../l10n/app_localizations.dart';
 
 @immutable
 class FriendlyError {
@@ -32,4 +35,26 @@ FriendlyError friendlyErrorFor(Object e) {
     message: 'We hit an unexpected error. Pull to refresh or try again.',
     cause: e,
   );
+}
+
+FriendlyError localizedFriendlyErrorFor(
+  BuildContext context,
+  Object error,
+) {
+  final l10n = AppLocalizations.of(context)!;
+  if (error is ContentApiException) {
+    final message = switch (error.code) {
+      'not-configured' => l10n.notConfigured,
+      'source-locked' => l10n.sourceLocked,
+      'timeout' => l10n.contentServerSlow,
+      'network' => l10n.contentServerUnavailable,
+      _ => error.message,
+    };
+    return FriendlyError(
+      title: l10n.contentSource,
+      message: message,
+      cause: error,
+    );
+  }
+  return friendlyErrorFor(error);
 }

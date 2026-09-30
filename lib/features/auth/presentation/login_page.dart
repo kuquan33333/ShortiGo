@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/error/friendly_error.dart';
 import '../../../core/providers.dart';
+import '../../../l10n/app_localizations.dart';
 import '../application/auth_notifier.dart';
 
 class LoginPage extends ConsumerStatefulWidget {
@@ -28,9 +29,12 @@ class _LoginPageState extends ConsumerState<LoginPage> {
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(authNotifierProvider);
+    final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: Text(_isRegister ? 'Create account' : 'Sign in')),
+      appBar: AppBar(
+        title: Text(_isRegister ? l10n.createAccount : l10n.signIn),
+      ),
       body: Padding(
         padding: const EdgeInsets.all(24),
         child: Column(
@@ -40,13 +44,13 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             TextField(
               controller: _email,
               keyboardType: TextInputType.emailAddress,
-              decoration: const InputDecoration(labelText: 'Email'),
+              decoration: InputDecoration(labelText: l10n.email),
             ),
             const SizedBox(height: 12),
             TextField(
               controller: _password,
               obscureText: true,
-              decoration: const InputDecoration(labelText: 'Password'),
+              decoration: InputDecoration(labelText: l10n.password),
             ),
             const SizedBox(height: 24),
             async.when(
@@ -64,17 +68,17 @@ class _LoginPageState extends ConsumerState<LoginPage> {
             ),
             FilledButton(
               onPressed: _submit,
-              child: Text(_isRegister ? 'Create account' : 'Sign in'),
+              child: Text(_isRegister ? l10n.createAccount : l10n.signIn),
             ),
             const SizedBox(height: 8),
             OutlinedButton(
               onPressed: _signInWithGoogle,
-              child: const Text('Continue with Google'),
+              child: Text(l10n.continueWithGoogle),
             ),
             TextButton(
               onPressed: () => setState(() => _isRegister = !_isRegister),
               child: Text(
-                _isRegister ? 'I have an account' : 'Create a new account',
+                _isRegister ? l10n.signIn : l10n.createAccount,
               ),
             ),
           ],

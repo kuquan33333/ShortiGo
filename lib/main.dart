@@ -26,20 +26,24 @@ Future<void> main() async {
       '${env.releaseBlockingIssues.map((issue) => '- $issue').join('\n')}',
     );
   }
-  await FirebaseBootstrap.initialize();
-  unawaited(
-    FirebasePerformance.instance.setPerformanceCollectionEnabled(true),
-  );
+  final firebaseAvailable = await FirebaseBootstrap.initialize();
+  if (firebaseAvailable) {
+    unawaited(
+      FirebasePerformance.instance.setPerformanceCollectionEnabled(true),
+    );
+  }
   SystemChannels.system.setMessageHandler((message) async {
     if (message == 'memoryPressure') {
       debugPrint('Memory pressure warning received');
     }
     return null;
   });
-  fb.FirebaseAuth.instance.authStateChanges().listen(_onAuthStateChanged);
+  if (firebaseAvailable) {
+    fb.FirebaseAuth.instance.authStateChanges().listen(_onAuthStateChanged);
+  }
   runApp(
     ProviderScope(
-      child: ShortiGoApp(router: buildRouter(requireAuth: true)),
+      child: ShortiGoApp(router: buildRouter(requireAuth: false)),
     ),
   );
 
@@ -58,26 +62,29 @@ Future<void> main() async {
 }
 
 Future<void> _onAuthStateChanged(fb.User? user) async {
-  if (user == null) {
+  if (user == null || !FirebaseBootstrap.isAvailable) {
     return;
   }
 
-  final db = FirebaseFirestore.instance;
-  final ref = db.collection('users').doc(user.uid);
-  final snap = await ref.get();
-  if (snap.exists) {
-    return;
-  }
+  try {
+    final db = FirebaseFirestore.instance;
+    final ref = db.collection('users').doc(user.uid);
+    final snap = await ref.get();
+    if (snap.exists) return;
 
-  await ref.set({
-    'id': user.uid,
-    'email': user.email ?? '',
-    'displayName': user.displayName,
-    'photoUrl': user.photoURL,
-    'coins': 0,
-    'bonus': 0,
-    'isVip': false,
-    'favoriteSeriesIds': <String>[],
-    'createdAt': FieldValue.serverTimestamp(),
-  });
+    await ref.set({
+      'id': user.uid,
+      'email': user.email ?? '',
+      'displayName': user.displayName,
+      'photoUrl': user.photoURL,
+      'coins': 0,
+      'bonus': 0,
+      'isVip': false,
+      'favoriteSeriesIds': <String>[],
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  } on Object catch (error, stackTrace) {
+    debugPrint('Unable to initialize the Firebase user document: $error');
+    debugPrintStack(stackTrace: stackTrace);
+  }
 }
