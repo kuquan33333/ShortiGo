@@ -17,6 +17,11 @@ The workflow runs Flutter dependency installation, analysis, tests, and an
 unsigned IPA build. It has no iOS signing configuration and does not use
 TestFlight or an Apple distribution certificate.
 
+The workflow explicitly disables Flutter Swift Package Manager for this build.
+The current `google_mobile_ads` and `better_player_plus` versions use
+CocoaPods, so this keeps the build dependency mode consistent without changing
+the app's dependency versions or native project files.
+
 ## Test build flags
 
 The build command passes:

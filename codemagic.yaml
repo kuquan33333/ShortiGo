@@ -7,6 +7,8 @@ workflows:
       flutter: stable
       xcode: latest
     scripts:
+      - name: Use CocoaPods for current iOS plugins
+        script: flutter config --no-enable-swift-package-manager
       - name: Install Flutter dependencies
         script: flutter pub get
       - name: Static analysis
