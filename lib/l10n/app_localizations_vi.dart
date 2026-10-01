@@ -33,6 +33,26 @@ class AppLocalizationsVi extends AppLocalizations {
   String get contentSource => 'Nguồn nội dung';
 
   @override
+  String get contentSourceSetupTitle => 'Chưa cấu hình nguồn phim';
+
+  @override
+  String get contentSourceSetupDescription =>
+      'ShortiGo không cài sẵn nguồn nội dung. Hãy thêm URL Content API của bạn để bắt đầu xem phim.';
+
+  @override
+  String get configureContentSource => 'Cấu hình nguồn phim';
+
+  @override
+  String get contentSourceSetupHint =>
+      'Bạn có thể thay đổi nguồn bất cứ lúc nào trong Cài đặt.';
+
+  @override
+  String get popularCategories => 'Thể loại phổ biến';
+
+  @override
+  String get maybeYouLike => 'Có thể bạn thích';
+
+  @override
   String get contentApiServer => 'Máy chủ API phim';
 
   @override

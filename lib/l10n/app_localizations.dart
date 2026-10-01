@@ -146,6 +146,42 @@ abstract class AppLocalizations {
   /// **'Content source'**
   String get contentSource;
 
+  /// No description provided for @contentSourceSetupTitle.
+  ///
+  /// In en, this message translates to:
+  /// **'No content source configured'**
+  String get contentSourceSetupTitle;
+
+  /// No description provided for @contentSourceSetupDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'ShortiGo does not ship with a built-in content source. Add your Content API URL to start watching.'**
+  String get contentSourceSetupDescription;
+
+  /// No description provided for @configureContentSource.
+  ///
+  /// In en, this message translates to:
+  /// **'Configure content source'**
+  String get configureContentSource;
+
+  /// No description provided for @contentSourceSetupHint.
+  ///
+  /// In en, this message translates to:
+  /// **'You can change the source anytime in Settings.'**
+  String get contentSourceSetupHint;
+
+  /// No description provided for @popularCategories.
+  ///
+  /// In en, this message translates to:
+  /// **'Popular categories'**
+  String get popularCategories;
+
+  /// No description provided for @maybeYouLike.
+  ///
+  /// In en, this message translates to:
+  /// **'You may like'**
+  String get maybeYouLike;
+
   /// No description provided for @contentApiServer.
   ///
   /// In en, this message translates to:

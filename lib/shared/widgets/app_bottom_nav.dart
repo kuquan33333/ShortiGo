@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../l10n/app_localizations.dart';
+import 'app_pressable.dart';
 
 class AppBottomNav extends StatelessWidget {
   const AppBottomNav({super.key});
@@ -99,24 +100,17 @@ class _NavItem extends StatelessWidget {
       button: true,
       selected: selected,
       label: tab.label,
-      child: InkWell(
+      child: AppPressable(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(18),
+        semanticsLabel: tab.label,
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              AnimatedContainer(
-                duration: const Duration(milliseconds: 180),
-                width: selected ? 42 : 36,
+              SizedBox(
+                width: 42,
                 height: 30,
-                decoration: BoxDecoration(
-                  color: selected
-                      ? AppColors.primary.withValues(alpha: .18)
-                      : Colors.transparent,
-                  borderRadius: BorderRadius.circular(16),
-                ),
                 child: Icon(
                   selected ? tab.selected : tab.icon,
                   color: color,

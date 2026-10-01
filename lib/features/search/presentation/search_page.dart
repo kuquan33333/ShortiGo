@@ -6,11 +6,16 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/providers.dart';
 import '../../../core/error/friendly_error.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../data/remote/content_api_mapper.dart';
 import '../../../data/remote/content_api_models.dart';
 import '../../../data/remote/remote_series_repository.dart';
+import '../../../domain/entities/category.dart';
 import '../../../domain/entities/series.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/widgets/app_pressable.dart';
+import '../../../shared/widgets/content_source_setup_view.dart';
+import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/loading_view.dart';
 import '../../discover/presentation/series_card.dart';
 
@@ -33,8 +38,29 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   bool _hasMore = false;
   bool _loadingMore = false;
   Object? _loadMoreError;
-  String? _error;
+  Object? _error;
   bool _loading = false;
+  List<Series> _landingResults = const [];
+  Category? _landingCategory;
+  Object? _landingError;
+  bool _landingLoading = true;
+
+  static const _landingCategories = [
+    Category.romance,
+    Category.ceo,
+    Category.revenge,
+    Category.family,
+    Category.action,
+    Category.fantasy,
+    Category.newReleases,
+    Category.hot,
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+    unawaited(_loadLanding());
+  }
 
   @override
   void dispose() {
@@ -58,6 +84,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
         _error = null;
         _loading = false;
       });
+      unawaited(_loadLanding());
       return;
     }
     setState(() {
@@ -112,7 +139,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     } catch (error) {
       if (!mounted || generation != _requestGeneration) return;
       setState(() {
-        _error = localizedFriendlyErrorFor(context, error).message;
+        _error = error;
         _loading = false;
         _results = const [];
         _hasMore = false;
@@ -135,7 +162,56 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       _error = null;
       _loading = query.isNotEmpty;
     });
-    if (query.isNotEmpty) unawaited(_search(query, generation));
+    if (query.isNotEmpty) {
+      unawaited(_search(query, generation));
+    } else {
+      unawaited(_loadLanding());
+    }
+  }
+
+  Future<void> _loadLanding({Category? category}) async {
+    if (!mounted) return;
+    setState(() {
+      _landingLoading = true;
+      _landingError = null;
+      if (category != null) _landingCategory = category;
+    });
+    try {
+      final repository = ref.read(seriesRepositoryProvider);
+      final items = await repository.byCategory(
+        category ?? _landingCategory ?? Category.recommended,
+        limit: 15,
+      );
+      if (!mounted || _controller.text.trim().isNotEmpty) return;
+      setState(() {
+        _landingResults = items;
+        _landingLoading = false;
+      });
+      if (repository is RemoteSeriesRepository) {
+        repository.rememberAll(items);
+      }
+    } catch (error) {
+      if (!mounted || _controller.text.trim().isNotEmpty) return;
+      setState(() {
+        _landingLoading = false;
+        _landingError = error;
+        _landingResults = const [];
+      });
+    }
+  }
+
+  String _categoryLabel(AppLocalizations l10n, Category category) {
+    return switch (category) {
+      Category.romance => l10n.romance,
+      Category.ceo => l10n.ceo,
+      Category.revenge => l10n.revenge,
+      Category.family => l10n.family,
+      Category.action => l10n.action,
+      Category.fantasy => l10n.fantasy,
+      Category.newReleases => l10n.newUpdates,
+      Category.hot => l10n.hot,
+      _ => l10n.recommended,
+    };
   }
 
   Future<void> _loadMore() async {
@@ -212,92 +288,197 @@ class _SearchPageState extends ConsumerState<SearchPage> {
           ),
         ),
       ),
-      body: _loading
-          ? const LoadingView()
-          : _error != null
-              ? Center(child: Text(_error!))
-              : _results.isEmpty
-                  ? Center(child: Text(l10n.noResults))
-                  : Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        if (_suggestions.isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-                            child: Wrap(
-                              spacing: 8,
-                              children: _suggestions
-                                  .take(5)
-                                  .map(
-                                    (item) => ActionChip(
-                                      label: Text(item),
-                                      onPressed: () => _selectSuggestion(item),
-                                    ),
-                                  )
-                                  .toList(),
-                            ),
-                          ),
-                        Expanded(
-                          child: NotificationListener<ScrollNotification>(
-                            onNotification: (notification) {
-                              if (notification.metrics.extentAfter < 500) {
-                                unawaited(_loadMore());
-                              }
-                              return false;
-                            },
-                            child: GridView.builder(
-                              padding: const EdgeInsets.all(12),
-                              gridDelegate:
-                                  const SliverGridDelegateWithFixedCrossAxisCount(
-                                crossAxisCount: 3,
-                                mainAxisSpacing: 12,
-                                crossAxisSpacing: 12,
-                                childAspectRatio: 9 / 16,
-                              ),
-                              itemCount: _results.length,
-                              itemBuilder: (_, index) {
-                                final series = _results[index];
-                                return SeriesCard(
-                                  series: series,
-                                  onTap: () =>
-                                      context.push('/series/${series.id}'),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        if (_loadMoreError != null)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: TextButton.icon(
-                              onPressed: _loadMore,
-                              icon: const Icon(Icons.refresh),
-                              label: Text(
-                                localizedFriendlyErrorFor(
-                                  context,
-                                  _loadMoreError!,
-                                ).message,
-                              ),
-                            ),
-                          )
-                        else if (_hasMore)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: FilledButton(
-                              onPressed: _loadingMore ? null : _loadMore,
-                              child: _loadingMore
-                                  ? const SizedBox(
-                                      height: 18,
-                                      width: 18,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                      ),
-                                    )
-                                  : Text(l10n.loadMore),
-                            ),
-                          ),
-                      ],
+      body: _controller.text.trim().isEmpty
+          ? _landing(context, l10n)
+          : _searchResults(context, l10n),
+    );
+  }
+
+  Widget _landing(BuildContext context, AppLocalizations l10n) {
+    if (_landingLoading && _landingResults.isEmpty) {
+      return const LoadingView();
+    }
+    if (_landingError != null && _landingResults.isEmpty) {
+      if (_landingError is ContentApiException &&
+          (_landingError! as ContentApiException).code == 'not-configured') {
+        return const ContentSourceSetupView();
+      }
+      return ErrorView(
+        error: localizedFriendlyErrorFor(context, _landingError!),
+        onRetry: _loadLanding,
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Text(l10n.popularCategories,
+              style: Theme.of(context).textTheme.titleLarge),
+        ),
+        SizedBox(
+          height: 42,
+          child: ListView.separated(
+            padding: const EdgeInsets.symmetric(horizontal: 16),
+            scrollDirection: Axis.horizontal,
+            itemCount: _landingCategories.length,
+            separatorBuilder: (_, __) => const SizedBox(width: 8),
+            itemBuilder: (_, index) {
+              final category = _landingCategories[index];
+              final selected = category == _landingCategory;
+              return AppPressable(
+                onTap: () => _loadLanding(category: category),
+                semanticsLabel: _categoryLabel(l10n, category),
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    color: selected
+                        ? AppColors.primary.withValues(alpha: .18)
+                        : AppColors.surface,
+                    border: Border.all(
+                        color:
+                            selected ? AppColors.primary : AppColors.divider),
+                    borderRadius: BorderRadius.circular(18),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 14),
+                    child: Center(
+                      child: Text(_categoryLabel(l10n, category),
+                          style: TextStyle(
+                              color: selected
+                                  ? Colors.white
+                                  : AppColors.textSecondary,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w700)),
                     ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
+          child: Text(l10n.maybeYouLike,
+              style: Theme.of(context).textTheme.titleLarge),
+        ),
+        Expanded(
+          child: GridView.builder(
+            padding: const EdgeInsets.fromLTRB(12, 4, 12, 24),
+            gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 3,
+              mainAxisSpacing: 12,
+              crossAxisSpacing: 12,
+              childAspectRatio: 9 / 16,
+            ),
+            itemCount: _landingResults.length,
+            itemBuilder: (_, index) {
+              final series = _landingResults[index];
+              return SeriesCard(
+                series: series,
+                onTap: () => context.push('/watch/${series.id}'),
+              );
+            },
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _searchResults(BuildContext context, AppLocalizations l10n) {
+    if (_loading) return const LoadingView();
+    if (_error != null) {
+      if (_error is ContentApiException &&
+          (_error! as ContentApiException).code == 'not-configured') {
+        return const ContentSourceSetupView();
+      }
+      return ErrorView(
+        error: localizedFriendlyErrorFor(context, _error!),
+        onRetry: () => _search(_lastQuery, _requestGeneration),
+      );
+    }
+    if (_results.isEmpty) return Center(child: Text(l10n.noResults));
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (_suggestions.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
+            child: Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: _suggestions.take(5).map((item) {
+                return AppPressable(
+                  onTap: () => _selectSuggestion(item),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.divider),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 7),
+                      child: Text(item,
+                          style: const TextStyle(
+                              color: AppColors.textSecondary, fontSize: 12)),
+                    ),
+                  ),
+                );
+              }).toList(),
+            ),
+          ),
+        Expanded(
+          child: NotificationListener<ScrollNotification>(
+            onNotification: (notification) {
+              if (notification.metrics.extentAfter < 500) {
+                unawaited(_loadMore());
+              }
+              return false;
+            },
+            child: GridView.builder(
+              padding: const EdgeInsets.all(12),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                mainAxisSpacing: 12,
+                crossAxisSpacing: 12,
+                childAspectRatio: 9 / 16,
+              ),
+              itemCount: _results.length,
+              itemBuilder: (_, index) {
+                final series = _results[index];
+                return SeriesCard(
+                  series: series,
+                  onTap: () => context.push('/watch/${series.id}'),
+                );
+              },
+            ),
+          ),
+        ),
+        if (_loadMoreError != null)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: TextButton.icon(
+              onPressed: _loadMore,
+              icon: const Icon(Icons.refresh),
+              label: Text(
+                  localizedFriendlyErrorFor(context, _loadMoreError!).message),
+            ),
+          )
+        else if (_hasMore)
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: FilledButton(
+              onPressed: _loadingMore ? null : _loadMore,
+              child: _loadingMore
+                  ? const SizedBox(
+                      height: 18,
+                      width: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(l10n.loadMore),
+            ),
+          ),
+      ],
     );
   }
 }

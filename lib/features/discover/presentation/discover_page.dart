@@ -1,14 +1,19 @@
 import 'dart:async';
 
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/error/friendly_error.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../data/remote/content_api_models.dart';
 import '../../../domain/entities/category.dart';
 import '../../../domain/entities/series.dart';
 import '../../../l10n/app_localizations.dart';
+import '../../../shared/format/compact_count.dart';
+import '../../../shared/widgets/app_pressable.dart';
+import '../../../shared/widgets/content_source_setup_view.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/loading_view.dart';
 import '../application/discover_notifier.dart';
@@ -52,10 +57,7 @@ class _DiscoverPageState extends ConsumerState<DiscoverPage> {
             Expanded(
               child: async.when(
                 loading: () => const LoadingView(),
-                error: (error, _) => ErrorView(
-                  error: localizedFriendlyErrorFor(context, error),
-                  onRetry: () => ref.invalidate(discoverNotifierProvider),
-                ),
+                error: (error, _) => _errorView(context, error),
                 data: (state) => _content(context, state),
               ),
             ),
@@ -67,10 +69,9 @@ class _DiscoverPageState extends ConsumerState<DiscoverPage> {
 
   Widget _content(BuildContext context, DiscoverState state) {
     if (state.selectedTab == DiscoverHomeTab.categories) {
-      return Column(
-        children: [
-          SizedBox(
-            height: 200,
+      return CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
             child: _Categories(
               current: state.currentCategory,
               onSelected: (category) => unawaited(
@@ -80,11 +81,24 @@ class _DiscoverPageState extends ConsumerState<DiscoverPage> {
               ),
             ),
           ),
-          Expanded(child: _grid(context, state.series)),
+          _gridSliver(context, state.series),
         ],
       );
     }
+    if (state.selectedTab == DiscoverHomeTab.ranking) {
+      return _rankingList(context, state.series);
+    }
     return _grid(context, state.series);
+  }
+
+  Widget _errorView(BuildContext context, Object error) {
+    if (error is ContentApiException && error.code == 'not-configured') {
+      return const ContentSourceSetupView();
+    }
+    return ErrorView(
+      error: localizedFriendlyErrorFor(context, error),
+      onRetry: () => ref.invalidate(discoverNotifierProvider),
+    );
   }
 
   Widget _grid(BuildContext context, List<Series> series) {
@@ -102,6 +116,138 @@ class _DiscoverPageState extends ConsumerState<DiscoverPage> {
         return SeriesCard(
           series: item,
           onTap: () => context.push('/watch/${item.id}'),
+        );
+      },
+    );
+  }
+
+  SliverPadding _gridSliver(BuildContext context, List<Series> series) {
+    return SliverPadding(
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+      sliver: SliverGrid(
+        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+          crossAxisCount: 3,
+          mainAxisSpacing: 18,
+          crossAxisSpacing: 10,
+          childAspectRatio: .49,
+        ),
+        delegate: SliverChildBuilderDelegate(
+          (_, index) {
+            final item = series[index];
+            return SeriesCard(
+              series: item,
+              onTap: () => context.push('/watch/${item.id}'),
+            );
+          },
+          childCount: series.length,
+        ),
+      ),
+    );
+  }
+
+  Widget _rankingList(BuildContext context, List<Series> series) {
+    return ListView.separated(
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
+      itemCount: series.length,
+      separatorBuilder: (_, __) => const SizedBox(height: 12),
+      itemBuilder: (_, index) {
+        final item = series[index];
+        final count = item.watchCount > 0 ? item.watchCount : item.popularity;
+        final rankColor = switch (index) {
+          0 => AppColors.vipGold,
+          1 => const Color(0xFFD2D6DD),
+          2 => const Color(0xFFCD8B61),
+          _ => AppColors.textSecondary,
+        };
+        final genre = item.genres.isNotEmpty
+            ? item.genres.first
+            : item.tags.isNotEmpty
+                ? item.tags.first
+                : null;
+        return AppPressable(
+          onTap: () => context.push('/watch/${item.id}'),
+          semanticsLabel: item.title,
+          child: SizedBox(
+            height: 112,
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 40,
+                  child: Text(
+                    '${index + 1}',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      color: rankColor,
+                      fontSize: index < 3 ? 27 : 20,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: 74,
+                  height: 112,
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(7),
+                    child: item.coverUrl.isEmpty
+                        ? const ColoredBox(
+                            color: AppColors.surfaceElevated,
+                            child: Icon(Icons.movie_outlined,
+                                color: AppColors.textMuted),
+                          )
+                        : CachedNetworkImage(
+                            imageUrl: item.coverUrl,
+                            fit: BoxFit.cover,
+                            placeholder: (_, __) => const ColoredBox(
+                              color: AppColors.surfaceElevated,
+                            ),
+                            errorWidget: (_, __, ___) => const ColoredBox(
+                              color: AppColors.surfaceElevated,
+                              child: Icon(Icons.broken_image_outlined,
+                                  color: AppColors.textMuted),
+                            ),
+                          ),
+                  ),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Text(
+                        item.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          height: 1.15,
+                        ),
+                      ),
+                      if (genre != null) ...[
+                        const SizedBox(height: 6),
+                        Text(genre,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(
+                                color: AppColors.textSecondary, fontSize: 13)),
+                      ],
+                      if (count > 0) ...[
+                        const SizedBox(height: 6),
+                        Text(compactCount(count),
+                            style: const TextStyle(
+                                color: AppColors.textMuted, fontSize: 12)),
+                      ],
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right_rounded,
+                    color: AppColors.textMuted),
+              ],
+            ),
+          ),
         );
       },
     );
@@ -124,9 +270,9 @@ class _HomeHeader extends StatelessWidget {
       child: Row(
         children: [
           Expanded(
-            child: InkWell(
+            child: AppPressable(
               onTap: onSearch,
-              borderRadius: BorderRadius.circular(8),
+              semanticsLabel: l10n.search,
               child: Container(
                 height: 42,
                 padding: const EdgeInsets.symmetric(horizontal: 12),
@@ -167,8 +313,17 @@ class _Shortcut extends StatelessWidget {
   final VoidCallback onTap;
 
   @override
-  Widget build(BuildContext context) =>
-      IconButton(onPressed: onTap, icon: Icon(icon, color: color, size: 30));
+  Widget build(BuildContext context) => AppPressable(
+        onTap: onTap,
+        semanticsLabel: icon == Icons.workspace_premium_rounded
+            ? AppLocalizations.of(context)!.vip
+            : AppLocalizations.of(context)!.rewards,
+        child: SizedBox(
+          width: 44,
+          height: 44,
+          child: Icon(icon, color: color, size: 30),
+        ),
+      );
 }
 
 class _HomeTabs extends StatelessWidget {
@@ -187,8 +342,9 @@ class _HomeTabs extends StatelessWidget {
         children: [
           for (var index = 0; index < labels.length; index++)
             Expanded(
-              child: InkWell(
+              child: AppPressable(
                 onTap: () => onSelected(index),
+                semanticsLabel: labels[index],
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
@@ -238,35 +394,53 @@ class _Categories extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    return ListView(
-      padding: const EdgeInsets.all(20),
-      children: [
-        Text(l10n.categories, style: Theme.of(context).textTheme.titleLarge),
-        const SizedBox(height: 16),
-        Wrap(
-          spacing: 10,
-          runSpacing: 10,
-          children: [
-            for (final category in categories)
-              OutlinedButton(
-                onPressed: () => onSelected(category),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: category == current
-                      ? Colors.white
-                      : AppColors.textSecondary,
-                  backgroundColor: category == current
-                      ? AppColors.primary
-                      : AppColors.surface,
-                  side: BorderSide(
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 14, 16, 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(l10n.categories, style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final category in categories)
+                AppPressable(
+                  onTap: () => onSelected(category),
+                  semanticsLabel: _label(l10n, category),
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
                       color: category == current
-                          ? AppColors.primary
-                          : AppColors.divider),
+                          ? AppColors.primary.withValues(alpha: .18)
+                          : AppColors.surface,
+                      borderRadius: BorderRadius.circular(18),
+                      border: Border.all(
+                        color: category == current
+                            ? AppColors.primary
+                            : AppColors.divider,
+                      ),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 13, vertical: 8),
+                      child: Text(
+                        _label(l10n, category),
+                        style: TextStyle(
+                          color: category == current
+                              ? Colors.white
+                              : AppColors.textSecondary,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-                child: Text(_label(l10n, category)),
-              ),
-          ],
-        ),
-      ],
+            ],
+          ),
+        ],
+      ),
     );
   }
 

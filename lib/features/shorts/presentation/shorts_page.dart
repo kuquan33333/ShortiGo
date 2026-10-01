@@ -10,13 +10,16 @@ import 'package:go_router/go_router.dart';
 import '../../../core/error/friendly_error.dart';
 import '../../../core/async/retryable_future_cache.dart';
 import '../../../core/providers.dart';
+import '../../../data/remote/content_api_models.dart';
 import '../../../domain/entities/episode.dart';
 import '../../../domain/entities/series.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/error_view.dart';
+import '../../../shared/widgets/content_source_setup_view.dart';
 import '../../../shared/widgets/loading_view.dart';
 import '../../episode_player/application/episode_access.dart';
 import '../../episode_player/presentation/episode_player_view.dart';
+import '../../episode_player/presentation/playback_data_source.dart';
 import '../application/shorts_feed_notifier.dart';
 import '../application/video_pre_cache_manager.dart';
 import 'shorts_action_rail.dart';
@@ -127,10 +130,13 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
       backgroundColor: Colors.black,
       body: async.when(
         loading: () => const LoadingView(),
-        error: (error, _) => ErrorView(
-          error: localizedFriendlyErrorFor(context, error),
-          onRetry: () => ref.invalidate(shortsFeedNotifierProvider),
-        ),
+        error: (error, _) =>
+            error is ContentApiException && error.code == 'not-configured'
+                ? const ContentSourceSetupView()
+                : ErrorView(
+                    error: localizedFriendlyErrorFor(context, error),
+                    onRetry: () => ref.invalidate(shortsFeedNotifierProvider),
+                  ),
         data: (state) {
           final l10n = AppLocalizations.of(context)!;
           final user = ref.watch(currentAppUserDocProvider).value;
@@ -153,9 +159,6 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
             });
           }
 
-          final activeEpisode = state.episodes[_current];
-          final series = state.seriesById[activeEpisode.seriesId];
-
           return Stack(
             children: [
               GestureDetector(
@@ -170,6 +173,7 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
                   itemBuilder: (_, index) {
                     final episode = state.episodes[index];
                     final isActive = index == _current;
+                    final itemSeries = state.seriesById[episode.seriesId];
                     final access = accessFor(
                       episode,
                       user,
@@ -179,120 +183,136 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
                         _playerMounted &&
                         access == EpisodeAccessState.open;
 
-                    return Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        if (showPlayer)
-                          Positioned.fill(
-                            child: IgnorePointer(
-                              child: LayoutBuilder(
-                                builder: (context, constraints) {
-                                  // Force the video surface to match the full
-                                  // viewport so it fills edge-to-edge instead
-                                  // of letterboxing to a fixed 9:16 box.
-                                  if (constraints.maxHeight > 0) {
-                                    _playerController.setOverriddenAspectRatio(
-                                      constraints.maxWidth /
-                                          constraints.maxHeight,
+                    return _ShortsPageChrome(
+                      controller: _pageController,
+                      index: index,
+                      child: Stack(
+                        fit: StackFit.expand,
+                        children: [
+                          if (showPlayer)
+                            Positioned.fill(
+                              child: IgnorePointer(
+                                child: LayoutBuilder(
+                                  builder: (context, constraints) {
+                                    // Force the video surface to match the full
+                                    // viewport so it fills edge-to-edge instead
+                                    // of letterboxing to a fixed 9:16 box.
+                                    if (constraints.maxHeight > 0) {
+                                      _playerController
+                                          .setOverriddenAspectRatio(
+                                        constraints.maxWidth /
+                                            constraints.maxHeight,
+                                      );
+                                    }
+                                    return BetterPlayer(
+                                      key: ValueKey(
+                                        _attachedEpisodeId ?? 'shorts_player',
+                                      ),
+                                      controller: _playerController,
                                     );
-                                  }
-                                  return BetterPlayer(
-                                    key: ValueKey(
-                                      _attachedEpisodeId ?? 'shorts_player',
-                                    ),
-                                    controller: _playerController,
-                                  );
-                                },
+                                  },
+                                ),
                               ),
                             ),
+                          VideoCard(
+                            key: ValueKey('chrome_${episode.id}'),
+                            episode: episode,
+                            isActive: isActive,
+                            isLoading: isActive && _isLoading,
+                            hasError: isActive && _hasError,
+                            access: access,
+                            bonusBalance: user?.bonus ?? 0,
+                            onRetry: () => unawaited(
+                              _playEpisodeAt(_current, state.episodes),
+                            ),
+                            onUnlock: () =>
+                                unawaited(_unlockShortEpisode(episode)),
+                            onEarnBonus: () => context.go('/rewards'),
                           ),
-                        VideoCard(
-                          key: ValueKey('chrome_${episode.id}'),
-                          episode: episode,
-                          isActive: isActive,
-                          isLoading: isActive && _isLoading,
-                          hasError: isActive && _hasError,
-                          access: access,
-                          bonusBalance: user?.bonus ?? 0,
-                          onRetry: () => unawaited(
-                            _playEpisodeAt(_current, state.episodes),
+                          if (isActive)
+                            Center(
+                              child: IgnorePointer(
+                                child: AnimatedOpacity(
+                                  opacity: _isPausedByUser ? 1 : 0,
+                                  duration: const Duration(milliseconds: 180),
+                                  child: Container(
+                                    width: 92,
+                                    height: 92,
+                                    decoration: BoxDecoration(
+                                      color:
+                                          Colors.black.withValues(alpha: .22),
+                                      shape: BoxShape.circle,
+                                    ),
+                                    child: const Icon(
+                                      Icons.play_arrow_rounded,
+                                      color: Colors.white,
+                                      size: 70,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ),
+                          Positioned(
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            child: ShortsVideoProgressBar(
+                              progress: isActive ? _playbackProgress : 0,
+                              visible: isActive &&
+                                  _playerMounted &&
+                                  !_isLoading &&
+                                  !_hasError &&
+                                  access == EpisodeAccessState.open,
+                            ),
                           ),
-                          onUnlock: () =>
-                              unawaited(_unlockShortEpisode(episode)),
-                          onEarnBonus: () => context.go('/rewards'),
-                        ),
-                      ],
+                          if (itemSeries != null)
+                            Positioned.fill(
+                              child: IgnorePointer(
+                                ignoring: !isActive,
+                                child: Stack(
+                                  fit: StackFit.expand,
+                                  children: [
+                                    Positioned(
+                                      left: 0,
+                                      right: 0,
+                                      bottom: 0,
+                                      child: ShortsInfoPanel(
+                                        key: ValueKey(
+                                            'shorts_info_${itemSeries.id}'),
+                                        series: itemSeries,
+                                        episode: episode,
+                                        onTitle: () => unawaited(
+                                          _showDetailSheet(
+                                              itemSeries, episode.id),
+                                        ),
+                                        onWatchAll: () {
+                                          unawaited(_safePause());
+                                          context.push(
+                                            '/watch/${itemSeries.id}?episodeId=${Uri.encodeComponent(episode.id)}',
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                    Positioned(
+                                      right: 0,
+                                      bottom: 0,
+                                      child: ShortsActionRail(
+                                        key: ValueKey(
+                                            'shorts_actions_${episode.id}'),
+                                        series: itemSeries,
+                                        episode: episode,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                        ],
+                      ),
                     );
                   },
                 ),
               ),
-              Center(
-                child: IgnorePointer(
-                  child: AnimatedOpacity(
-                    opacity: _isPausedByUser ? 1 : 0,
-                    duration: const Duration(milliseconds: 180),
-                    child: Container(
-                      width: 92,
-                      height: 92,
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.22),
-                        shape: BoxShape.circle,
-                      ),
-                      child: const Icon(
-                        Icons.play_arrow_rounded,
-                        color: Colors.white,
-                        size: 70,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              Positioned(
-                bottom: 0,
-                left: 0,
-                right: 0,
-                child: ShortsVideoProgressBar(
-                  progress: _playbackProgress,
-                  visible: _playerMounted &&
-                      !_isLoading &&
-                      !_hasError &&
-                      accessFor(
-                            activeEpisode,
-                            user,
-                            effectiveVip: effectiveVip,
-                          ) ==
-                          EpisodeAccessState.open,
-                ),
-              ),
-              if (series != null)
-                Positioned(
-                  left: 0,
-                  right: 0,
-                  bottom: 0,
-                  child: ShortsInfoPanel(
-                    key: ValueKey('shorts_info_${series.id}'),
-                    series: series,
-                    episode: activeEpisode,
-                    onTitle: () =>
-                        unawaited(_showDetailSheet(series, activeEpisode.id)),
-                    onWatchAll: () {
-                      unawaited(_safePause());
-                      context.push(
-                        '/watch/${series.id}?episodeId=${Uri.encodeComponent(activeEpisode.id)}',
-                      );
-                    },
-                  ),
-                ),
-              if (series != null)
-                Positioned(
-                  right: 0,
-                  bottom: 0,
-                  child: ShortsActionRail(
-                    key: ValueKey('shorts_actions_${activeEpisode.id}'),
-                    series: series,
-                    episode: activeEpisode,
-                  ),
-                ),
             ],
           );
         },
@@ -393,12 +413,7 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
       }
 
       await _playerController.setupDataSource(
-        BetterPlayerDataSource.network(
-          url,
-          cacheConfiguration: const BetterPlayerCacheConfiguration(
-            useCache: true,
-          ),
-        ),
+        buildNetworkVideoDataSource(url),
       );
       if (!mounted || generation != _playGeneration) {
         return;
@@ -432,7 +447,7 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
             seriesId: episode.seriesId,
             episodeId: episode.id,
             storagePath: episode.videoUrl,
-            chapterIndex: episode.sourceChapterIndex ?? episode.order - 1,
+            chapterIndex: canonicalChapterIndex(episode),
           ),
     );
   }
@@ -527,6 +542,41 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
     if (totalMb < 3000) {
       _preCache.windowSize = 2;
     }
+  }
+}
+
+class _ShortsPageChrome extends StatelessWidget {
+  const _ShortsPageChrome({
+    required this.controller,
+    required this.index,
+    required this.child,
+  });
+
+  final PageController controller;
+  final int index;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      child: child,
+      builder: (context, child) {
+        final page = controller.hasClients
+            ? (controller.page ?? index.toDouble())
+            : index.toDouble();
+        final distance = (page - index).abs();
+        final opacity = (1 - distance * 1.2).clamp(0.0, 1.0);
+        final scale = .98 + opacity * .02;
+        return IgnorePointer(
+          ignoring: distance > .55,
+          child: Opacity(
+            opacity: opacity,
+            child: Transform.scale(scale: scale, child: child),
+          ),
+        );
+      },
+    );
   }
 }
 

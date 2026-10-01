@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../domain/entities/episode.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../episode_player/application/episode_access.dart';
+import '../../episode_player/presentation/episode_player_view.dart';
 
 /// Loading/error overlay for a Shorts page. Video playback is handled by [ShortsPage].
 class VideoCard extends StatelessWidget {
@@ -78,9 +79,9 @@ class VideoCard extends StatelessWidget {
           ColoredBox(
             color: Colors.black,
             child: Center(
-              child: FilledButton(
+              child: CompactPlaybackRetry(
+                label: l10n.retry,
                 onPressed: onRetry,
-                child: Text(l10n.tapToRetry),
               ),
             ),
           )

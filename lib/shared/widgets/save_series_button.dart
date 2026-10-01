@@ -142,23 +142,18 @@ class _GlassActionButton extends StatelessWidget {
       color: Colors.transparent,
       child: InkWell(
         onTap: onPressed,
-        borderRadius: BorderRadius.circular(32),
+        borderRadius: BorderRadius.circular(24),
+        splashColor: Colors.white12,
+        highlightColor: Colors.white10,
         child: SizedBox(
           width: 64,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              Container(
+              SizedBox(
                 width: 48,
-                height: 48,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: Colors.white.withValues(alpha: 0.14),
-                  border: Border.all(
-                    color: Colors.white.withValues(alpha: 0.2),
-                  ),
-                ),
-                child: Icon(icon, color: Colors.white, size: 22),
+                height: 44,
+                child: Icon(icon, color: Colors.white, size: 31),
               ),
               const SizedBox(height: 4),
               Text(

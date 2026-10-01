@@ -7,6 +7,7 @@ import '../../../core/providers.dart';
 import '../../../domain/entities/episode.dart';
 import '../../../data/remote/content_api_models.dart';
 import 'episode_access.dart';
+import '../presentation/playback_data_source.dart';
 
 class EpisodePlayerState {
   const EpisodePlayerState({this.controller, this.episode, this.error});
@@ -63,7 +64,7 @@ class EpisodePlayerNotifier
         seriesId: args.seriesId,
         episodeId: args.episodeId,
         storagePath: episode.videoUrl,
-        chapterIndex: episode.sourceChapterIndex,
+        chapterIndex: canonicalChapterIndex(episode),
       );
 
       final controller = BetterPlayerController(
@@ -78,12 +79,7 @@ class EpisodePlayerNotifier
         ),
       );
       await controller.setupDataSource(
-        BetterPlayerDataSource.network(
-          url,
-          cacheConfiguration: const BetterPlayerCacheConfiguration(
-            useCache: true,
-          ),
-        ),
+        buildNetworkVideoDataSource(url),
       );
 
       return EpisodePlayerState(controller: controller, episode: episode);
@@ -91,9 +87,7 @@ class EpisodePlayerNotifier
   }
 }
 
-final episodePlayerNotifierProvider =
-    AsyncNotifierProvider.family<
-      EpisodePlayerNotifier,
-      EpisodePlayerState,
-      EpisodePlayerArgs
-    >(EpisodePlayerNotifier.new);
+final episodePlayerNotifierProvider = AsyncNotifierProvider.family<
+    EpisodePlayerNotifier,
+    EpisodePlayerState,
+    EpisodePlayerArgs>(EpisodePlayerNotifier.new);

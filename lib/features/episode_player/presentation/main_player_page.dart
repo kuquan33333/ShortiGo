@@ -15,8 +15,10 @@ import '../../../domain/entities/series.dart';
 import '../../../domain/entities/user.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/save_series_button.dart';
+import '../../../shared/widgets/app_pressable.dart';
 import '../application/episode_access.dart';
 import 'episode_player_view.dart';
+import 'playback_data_source.dart';
 import '../../series_detail/presentation/series_detail_page.dart';
 import '../../shorts/application/shorts_share_link.dart';
 
@@ -227,12 +229,7 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
       if (!mounted || generation != _generation) return;
       await _controller.pause();
       await _controller.setupDataSource(
-        BetterPlayerDataSource.network(
-          url,
-          cacheConfiguration: const BetterPlayerCacheConfiguration(
-            useCache: true,
-          ),
-        ),
+        buildNetworkVideoDataSource(url),
       );
       if (!mounted || generation != _generation) return;
       setState(() {
@@ -291,7 +288,7 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
             seriesId: widget.seriesId,
             episodeId: episode.id,
             storagePath: episode.videoUrl,
-            chapterIndex: episode.sourceChapterIndex,
+            chapterIndex: canonicalChapterIndex(episode),
           ),
     );
   }
@@ -404,67 +401,108 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
           final active = index == _currentIndex;
           final item = _episodes[index];
           final itemAccess = _accessFor(item);
-          return Stack(
-            fit: StackFit.expand,
-            children: [
-              _EpisodeBackdrop(episode: item),
-              if (active &&
-                  _controllerReady &&
-                  itemAccess == EpisodeAccessState.open)
-                Positioned.fill(
-                  child: IgnorePointer(
-                    child: LayoutBuilder(
-                      builder: (context, constraints) {
-                        if (constraints.maxWidth > 0 &&
-                            constraints.maxHeight > 0) {
-                          _controller.setOverriddenAspectRatio(
-                            constraints.maxWidth / constraints.maxHeight,
+          return _MainPlayerPageTransition(
+            controller: _pageController,
+            index: index,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                _EpisodeBackdrop(episode: item),
+                if (active &&
+                    _controllerReady &&
+                    itemAccess == EpisodeAccessState.open)
+                  Positioned.fill(
+                    child: IgnorePointer(
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
+                          if (constraints.maxWidth > 0 &&
+                              constraints.maxHeight > 0) {
+                            _controller.setOverriddenAspectRatio(
+                              constraints.maxWidth / constraints.maxHeight,
+                            );
+                          }
+                          return BetterPlayer(
+                            key: ValueKey('main_player_${item.id}'),
+                            controller: _controller,
                           );
-                        }
-                        return BetterPlayer(
-                          key: ValueKey('main_player_${item.id}'),
-                          controller: _controller,
-                        );
-                      },
+                        },
+                      ),
                     ),
                   ),
+                _MainPlayerChrome(
+                  series: series,
+                  episode: item,
+                  access: itemAccess,
+                  interactive: active,
+                  loading: active && _loading,
+                  error: active ? _error : null,
+                  paused: active && _paused,
+                  showTransientPause: active && _showingTransientPause,
+                  ended: active && _ended && index == _episodes.length - 1,
+                  onTapVideo: active ? _togglePlayback : null,
+                  onBack: active ? context.pop : null,
+                  onTitle: active ? _showDetailSheet : null,
+                  onEpisodes: active ? _showEpisodes : null,
+                  onShare: active ? _share : null,
+                  onRetry: active
+                      ? () => unawaited(_switchToEpisode(index, autoplay: true))
+                      : null,
+                  position: active ? _position : 0,
+                  duration: active ? _duration : 0,
+                  onSeekStart: active ? (_) {} : null,
+                  onSeekChanged: active
+                      ? (value) => setState(() => _seekPreview = value)
+                      : null,
+                  onSeekEnd: active
+                      ? (value) {
+                          _seek(value);
+                          setState(() => _seekPreview = null);
+                        }
+                      : null,
+                  seekPreview: active ? _seekPreview : null,
                 ),
-              _MainPlayerChrome(
-                series: series,
-                episode: item,
-                access: itemAccess,
-                interactive: active,
-                loading: active && _loading,
-                error: active ? _error : null,
-                paused: active && _paused,
-                showTransientPause: active && _showingTransientPause,
-                ended: active && _ended && index == _episodes.length - 1,
-                onTapVideo: active ? _togglePlayback : null,
-                onBack: active ? context.pop : null,
-                onTitle: active ? _showDetailSheet : null,
-                onEpisodes: active ? _showEpisodes : null,
-                onShare: active ? _share : null,
-                onRetry: active
-                    ? () => unawaited(_switchToEpisode(index, autoplay: true))
-                    : null,
-                position: active ? _position : 0,
-                duration: active ? _duration : 0,
-                onSeekStart: active ? (_) {} : null,
-                onSeekChanged: active
-                    ? (value) => setState(() => _seekPreview = value)
-                    : null,
-                onSeekEnd: active
-                    ? (value) {
-                        _seek(value);
-                        setState(() => _seekPreview = null);
-                      }
-                    : null,
-                seekPreview: active ? _seekPreview : null,
-              ),
-            ],
+              ],
+            ),
           );
         },
       ),
+    );
+  }
+}
+
+class _MainPlayerPageTransition extends StatelessWidget {
+  const _MainPlayerPageTransition({
+    required this.controller,
+    required this.index,
+    required this.child,
+  });
+
+  final PageController controller;
+  final int index;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: controller,
+      child: child,
+      builder: (context, child) {
+        final page = controller.hasClients
+            ? (controller.page ?? index.toDouble())
+            : index.toDouble();
+        final distance = (page - index).abs();
+        final opacity = (1 - distance * 1.2).clamp(0.0, 1.0);
+        return IgnorePointer(
+          ignoring: distance > .55,
+          child: Opacity(
+            opacity: opacity,
+            child: Transform.scale(
+              scale: .98 + opacity * .02,
+              child: child,
+            ),
+          ),
+        );
+      },
     );
   }
 }
@@ -600,8 +638,25 @@ class _MainPlayerChrome extends StatelessWidget {
         if (access != EpisodeAccessState.open) _AccessOverlay(access: access),
         if (error != null && access == EpisodeAccessState.open)
           Center(
-              child: FilledButton(
-                  onPressed: onRetry, child: Text(l10n.tapToRetry))),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  localizedFriendlyErrorFor(context, error!).message,
+                  textAlign: TextAlign.center,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                CompactPlaybackRetry(
+                  label: l10n.retry,
+                  onPressed: onRetry,
+                ),
+              ],
+            ),
+          ),
         if (interactive &&
             access == EpisodeAccessState.open &&
             !loading &&
@@ -749,22 +804,25 @@ class _RailAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
+    return AppPressable(
       onTap: onTap,
-      borderRadius: BorderRadius.circular(26),
-      child: Column(
-        children: [
-          Icon(icon,
-              color: color,
-              size: 31,
-              shadows: const [Shadow(color: Colors.black87, blurRadius: 8)]),
-          const SizedBox(height: 3),
-          Text(label,
-              style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 10,
-                  shadows: [Shadow(color: Colors.black87, blurRadius: 6)])),
-        ],
+      semanticsLabel: label,
+      child: SizedBox(
+        width: 64,
+        child: Column(
+          children: [
+            Icon(icon,
+                color: color,
+                size: 31,
+                shadows: const [Shadow(color: Colors.black87, blurRadius: 8)]),
+            const SizedBox(height: 3),
+            Text(label,
+                style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 10,
+                    shadows: [Shadow(color: Colors.black87, blurRadius: 6)])),
+          ],
+        ),
       ),
     );
   }
@@ -789,8 +847,9 @@ class _BottomInfo extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        InkWell(
+        AppPressable(
           onTap: onTitle,
+          semanticsLabel: series.title,
           child: Row(
             children: [
               Expanded(

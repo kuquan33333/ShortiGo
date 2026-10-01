@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shortigo/core/providers.dart';
+import 'package:shortigo/data/remote/content_api_models.dart';
 import 'package:shortigo/domain/entities/category.dart';
 import 'package:shortigo/domain/entities/series.dart';
 import 'package:shortigo/domain/interfaces/series_repository.dart';
@@ -61,11 +62,42 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Ngôn tình'), findsOneWidget);
 
-    final romanceButton = find.widgetWithText(OutlinedButton, 'Ngôn tình');
+    final romanceButton = find.text('Ngôn tình');
     await tester.ensureVisible(romanceButton);
     await tester.tap(romanceButton);
     await tester.pumpAndSettle();
     expect(find.text('Romance result'), findsOneWidget);
-    expect(find.byType(GridView), findsOneWidget);
+    expect(find.byType(CustomScrollView), findsOneWidget);
   });
+
+  testWidgets('missing content source shows setup CTA instead of retry error',
+      (tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          seriesRepositoryProvider.overrideWithValue(
+            _NotConfiguredSeriesRepository(),
+          ),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: AppLocalizations.localizationsDelegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          locale: const Locale('vi', 'VN'),
+          home: const DiscoverPage(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Chưa cấu hình nguồn phim'), findsOneWidget);
+    expect(find.text('Cấu hình nguồn phim'), findsOneWidget);
+    expect(find.text('Thử lại'), findsNothing);
+  });
+}
+
+class _NotConfiguredSeriesRepository extends _FakeSeriesRepository {
+  @override
+  Future<List<Series>> byCategory(Category category, {int limit = 20}) async {
+    throw const ContentApiException(code: 'not-configured');
+  }
 }

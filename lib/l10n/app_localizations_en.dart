@@ -33,6 +33,26 @@ class AppLocalizationsEn extends AppLocalizations {
   String get contentSource => 'Content source';
 
   @override
+  String get contentSourceSetupTitle => 'No content source configured';
+
+  @override
+  String get contentSourceSetupDescription =>
+      'ShortiGo does not ship with a built-in content source. Add your Content API URL to start watching.';
+
+  @override
+  String get configureContentSource => 'Configure content source';
+
+  @override
+  String get contentSourceSetupHint =>
+      'You can change the source anytime in Settings.';
+
+  @override
+  String get popularCategories => 'Popular categories';
+
+  @override
+  String get maybeYouLike => 'You may like';
+
+  @override
   String get contentApiServer => 'Movie API server';
 
   @override

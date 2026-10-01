@@ -11,6 +11,7 @@ import '../../../data/remote/remote_series_repository.dart';
 import '../../../domain/entities/series.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/loading_view.dart';
+import '../../../shared/widgets/content_source_setup_view.dart';
 import '../../discover/presentation/series_card.dart';
 
 class CollectionPage extends ConsumerStatefulWidget {
@@ -178,14 +179,7 @@ class _CollectionPageState extends ConsumerState<CollectionPage> {
       body: _initialLoading && _items.isEmpty
           ? const LoadingView()
           : _error != null && _items.isEmpty
-              ? Center(
-                  child: FilledButton(
-                    onPressed: _loadInitial,
-                    child: Text(
-                      localizedFriendlyErrorFor(context, _error!).message,
-                    ),
-                  ),
-                )
+              ? _initialErrorView(context)
               : GridView.builder(
                   controller: _scrollController,
                   padding: const EdgeInsets.all(12),
@@ -221,6 +215,19 @@ class _CollectionPageState extends ConsumerState<CollectionPage> {
                     );
                   },
                 ),
+    );
+  }
+
+  Widget _initialErrorView(BuildContext context) {
+    if (_error is ContentApiException &&
+        (_error! as ContentApiException).code == 'not-configured') {
+      return const ContentSourceSetupView();
+    }
+    return Center(
+      child: FilledButton(
+        onPressed: _loadInitial,
+        child: Text(localizedFriendlyErrorFor(context, _error!).message),
+      ),
     );
   }
 }
