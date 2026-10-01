@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/error/friendly_error.dart';
 import '../../../core/async/retryable_future_cache.dart';
 import '../../../core/providers.dart';
@@ -51,9 +52,7 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _playerController = BetterPlayerController(
-      shortsPlayerConfiguration(),
-    );
+    _playerController = BetterPlayerController(shortsPlayerConfiguration());
     _playerController.addEventsListener(_onPlayerEvent);
     _maybeShrinkWindow();
   }
@@ -123,12 +122,11 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
         data: (state) {
           final l10n = AppLocalizations.of(context)!;
           final user = ref.watch(currentAppUserDocProvider).value;
+          final effectiveVip =
+              ref.watch(effectiveVipProvider).value ?? user?.isVip ?? false;
           if (state.episodes.isEmpty) {
             return Center(
-              child: Text(
-                l10n.noShorts,
-                style: TextStyle(color: Colors.white),
-              ),
+              child: Text(l10n.noShorts, style: TextStyle(color: Colors.white)),
             );
           }
 
@@ -160,8 +158,13 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
                   itemBuilder: (_, index) {
                     final episode = state.episodes[index];
                     final isActive = index == _current;
-                    final access = accessFor(episode, user);
-                    final showPlayer = isActive &&
+                    final access = accessFor(
+                      episode,
+                      user,
+                      effectiveVip: effectiveVip,
+                    );
+                    final showPlayer =
+                        isActive &&
                         _playerMounted &&
                         access == EpisodeAccessState.open;
 
@@ -203,9 +206,8 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
                           onRetry: () => unawaited(
                             _playEpisodeAt(_current, state.episodes),
                           ),
-                          onUnlock: () => unawaited(
-                            _unlockShortEpisode(episode),
-                          ),
+                          onUnlock: () =>
+                              unawaited(_unlockShortEpisode(episode)),
                           onEarnBonus: () => context.go('/rewards'),
                         ),
                       ],
@@ -240,10 +242,16 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
                 right: 0,
                 child: ShortsVideoProgressBar(
                   progress: _playbackProgress,
-                  visible: _playerMounted &&
+                  visible:
+                      _playerMounted &&
                       !_isLoading &&
                       !_hasError &&
-                      accessFor(activeEpisode, user) == EpisodeAccessState.open,
+                      accessFor(
+                            activeEpisode,
+                            user,
+                            effectiveVip: effectiveVip,
+                          ) ==
+                          EpisodeAccessState.open,
                 ),
               ),
               if (series != null)
@@ -295,7 +303,9 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
     final episode = episodes[index];
     final generation = ++_playGeneration;
     final user = ref.read(currentAppUserDocProvider).value;
-    if (accessFor(episode, user) != EpisodeAccessState.open) {
+    final effectiveVip = await ref.read(effectiveVipProvider.future);
+    if (accessFor(episode, user, effectiveVip: effectiveVip) !=
+        EpisodeAccessState.open) {
       await _safePause();
       if (!mounted || generation != _playGeneration) {
         return;
@@ -378,7 +388,9 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
   Future<String> _urlFor(Episode episode) {
     return _urlCache.getOrCreate(
       episode.id,
-      () => ref.read(videoSourceProvider).playableUrl(
+      () => ref
+          .read(videoSourceProvider)
+          .playableUrl(
             seriesId: episode.seriesId,
             episodeId: episode.id,
             storagePath: episode.videoUrl,
@@ -389,11 +401,14 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
 
   void _prefetchUrls(List<Episode> episodes) {
     final user = ref.read(currentAppUserDocProvider).value;
+    final effectiveVip =
+        ref.read(effectiveVipProvider).value ?? user?.isVip ?? false;
     for (final episode in episodes) {
       if (_keepIds.contains(episode.id) &&
           episode.sourceAvailable &&
           !episode.sourceLocked &&
-          accessFor(episode, user) == EpisodeAccessState.open) {
+          accessFor(episode, user, effectiveVip: effectiveVip) ==
+              EpisodeAccessState.open) {
         unawaited(_urlFor(episode).catchError((_) => ''));
       }
     }

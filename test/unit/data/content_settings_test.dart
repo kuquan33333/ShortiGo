@@ -16,14 +16,19 @@ void main() {
 
   tearDown(() async => database.close());
 
-  test('persists content API settings using the existing Drift cache',
-      () async {
-    await database.writeSetting('contentApiBaseUrl', 'https://api.example');
-    expect(
-      await database.readSetting('contentApiBaseUrl'),
-      'https://api.example',
-    );
-  });
+  test(
+    'persists content API settings using the existing Drift cache',
+    () async {
+      await database.writeSetting('contentApiBaseUrl', 'https://api.example');
+      expect(
+        await database.readSetting('contentApiBaseUrl'),
+        'https://api.example',
+      );
+
+      await database.deleteSetting('contentApiBaseUrl');
+      expect(await database.readSetting('contentApiBaseUrl'), isNull);
+    },
+  );
 
   test('persists guest favorites locally without Firebase', () async {
     final favorites = GuestFavoritesRepository(database);
@@ -39,9 +44,11 @@ void main() {
     expect(await favorites.contains(series.id), isTrue);
     expect((await favorites.list()).single.title, series.title);
     expect(
-        jsonDecode(
-            utf8.decode((await database.readGuestFavorites()).single.payload)),
-        isA<Map<String, dynamic>>());
+      jsonDecode(
+        utf8.decode((await database.readGuestFavorites()).single.payload),
+      ),
+      isA<Map<String, dynamic>>(),
+    );
 
     await favorites.remove(series.id);
     expect(await favorites.list(), isEmpty);

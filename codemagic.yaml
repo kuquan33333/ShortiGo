@@ -1,0 +1,24 @@
+workflows:
+  shortigo-ios-test:
+    name: shortigo-ios-test
+    max_build_duration: 60
+    instance_type: mac_mini_m2
+    environment:
+      flutter: stable
+      xcode: latest
+    scripts:
+      - name: Install Flutter dependencies
+        script: flutter pub get
+      - name: Static analysis
+        script: flutter analyze --no-fatal-infos
+      - name: Unit and widget tests
+        script: flutter test --no-pub
+      - name: Build unsigned test IPA
+        script: |
+          set -euo pipefail
+          flutter build ipa --release --no-codesign \
+            --dart-define=VIP_TEST_MODE=true \
+            --dart-define=CONTENT_API_BASE_URL=
+          test -n "$(find build/ios/ipa -maxdepth 1 -name '*.ipa' -print -quit)"
+    artifacts:
+      - build/ios/ipa/*.ipa

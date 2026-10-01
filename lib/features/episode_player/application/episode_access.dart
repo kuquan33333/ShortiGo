@@ -9,14 +9,18 @@ enum EpisodeAccessState {
   sourceUnavailable,
 }
 
-EpisodeAccessState accessFor(Episode episode, AppUser? user) {
+EpisodeAccessState accessFor(
+  Episode episode,
+  AppUser? user, {
+  bool? effectiveVip,
+}) {
   if (episode.sourceLocked) {
     return EpisodeAccessState.sourceLocked;
   }
   if (!episode.sourceAvailable) {
     return EpisodeAccessState.sourceUnavailable;
   }
-  if (episode.isVipLocked && !(user?.isVip ?? false)) {
+  if (episode.isVipLocked && !(effectiveVip ?? user?.isVip ?? false)) {
     return EpisodeAccessState.vipRequired;
   }
   if (episode.canUnlockWithBonus &&

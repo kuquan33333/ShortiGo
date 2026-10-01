@@ -8,7 +8,6 @@ import '../../../core/providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../domain/entities/transaction.dart';
-import '../../../domain/entities/user.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/loading_view.dart';
 import '../../subscription/application/subscription_notifier.dart';
@@ -36,8 +35,10 @@ class ProfilePage extends ConsumerWidget {
         ),
         data: (state) {
           final user = state.user;
+          final effectiveVip =
+              ref.watch(effectiveVipProvider).value ?? user?.isVip ?? false;
           if (user == null) {
-            return const _GuestProfile();
+            return _GuestProfile(effectiveVip: effectiveVip);
           }
 
           final initial = _initialFor(user.displayName ?? user.email);
@@ -82,7 +83,7 @@ class ProfilePage extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: 24),
-              _ViewerStatus(user: user),
+              _ViewerStatus(isVip: effectiveVip),
               const SizedBox(height: 16),
               Card(
                 child: Padding(
@@ -94,7 +95,7 @@ class ProfilePage extends ConsumerWidget {
                       _WalletCell(label: l10n.bonus, value: user.bonus),
                       _WalletCell(
                         label: l10n.vip,
-                        value: user.isVip ? l10n.yes : l10n.no,
+                        value: effectiveVip ? l10n.yes : l10n.no,
                       ),
                     ],
                   ),
@@ -159,7 +160,7 @@ class ProfilePage extends ConsumerWidget {
                 const SizedBox(height: 24),
                 const _AdDiagnostics(),
               ],
-              if (!user.isVip) ...[
+              if (!effectiveVip) ...[
                 const SizedBox(height: 16),
                 FilledButton(
                   onPressed: () => context.push('/subscribe'),
@@ -240,7 +241,9 @@ class ProfilePage extends ConsumerWidget {
 }
 
 class _GuestProfile extends StatelessWidget {
-  const _GuestProfile();
+  const _GuestProfile({required this.effectiveVip});
+
+  final bool effectiveVip;
 
   @override
   Widget build(BuildContext context) {
@@ -267,6 +270,26 @@ class _GuestProfile extends StatelessWidget {
           onPressed: () => context.push('/login'),
           child: Text(l10n.createAccount),
         ),
+        const SizedBox(height: 20),
+        Card(
+          child: ListTile(
+            leading: Icon(
+              effectiveVip
+                  ? Icons.workspace_premium
+                  : Icons.play_circle_outline,
+              color: effectiveVip ? AppColors.vipGold : AppColors.primaryLight,
+            ),
+            title: Text(effectiveVip ? l10n.vipViewer : l10n.freeViewer),
+            subtitle: Text(
+              effectiveVip ? l10n.vipEpisodeOpen : l10n.bonusSelectedEpisodes,
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        FilledButton(
+          onPressed: () => context.push('/subscribe'),
+          child: Text(effectiveVip ? l10n.vipMembership : l10n.getVip),
+        ),
         const SizedBox(height: 24),
         ListTile(
           leading: const Icon(Icons.settings_outlined),
@@ -279,9 +302,9 @@ class _GuestProfile extends StatelessWidget {
 }
 
 class _ViewerStatus extends StatelessWidget {
-  const _ViewerStatus({required this.user});
+  const _ViewerStatus({required this.isVip});
 
-  final AppUser user;
+  final bool isVip;
 
   @override
   Widget build(BuildContext context) {
@@ -289,28 +312,28 @@ class _ViewerStatus extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: user.isVip
+        color: isVip
             ? AppColors.vipGold.withValues(alpha: 0.12)
             : AppColors.surface,
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: user.isVip ? AppColors.vipGold : AppColors.divider,
+          color: isVip ? AppColors.vipGold : AppColors.divider,
         ),
       ),
       child: Row(
         children: [
           Icon(
-            user.isVip ? Icons.workspace_premium : Icons.play_circle_outline,
-            color: user.isVip ? AppColors.vipGold : AppColors.primaryLight,
+            isVip ? Icons.workspace_premium : Icons.play_circle_outline,
+            color: isVip ? AppColors.vipGold : AppColors.primaryLight,
           ),
           const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(user.isVip ? l10n.vipViewer : l10n.freeViewer),
+                Text(isVip ? l10n.vipViewer : l10n.freeViewer),
                 Text(
-                  user.isVip ? l10n.vipEpisodeOpen : l10n.bonusSelectedEpisodes,
+                  isVip ? l10n.vipEpisodeOpen : l10n.bonusSelectedEpisodes,
                   style: const TextStyle(color: AppColors.textSecondary),
                 ),
               ],
@@ -402,10 +425,7 @@ class _AdDiagnostics extends ConsumerWidget {
 }
 
 class _WalletCell extends StatelessWidget {
-  const _WalletCell({
-    required this.label,
-    required this.value,
-  });
+  const _WalletCell({required this.label, required this.value});
 
   final String label;
   final Object value;

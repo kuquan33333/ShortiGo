@@ -1,4 +1,5 @@
 import 'dart:io';
+
 import 'package:drift/drift.dart';
 import 'package:drift/native.dart';
 import 'package:path/path.dart' as p;
@@ -37,9 +38,9 @@ class ShortigoDatabase extends _$ShortigoDatabase {
   int get schemaVersion => 1;
 
   Future<String?> readSetting(String key) async {
-    final row = await (select(cachedSeries)
-          ..where((table) => table.id.equals(_settingId(key))))
-        .getSingleOrNull();
+    final row = await (select(
+      cachedSeries,
+    )..where((table) => table.id.equals(_settingId(key)))).getSingleOrNull();
     return row == null ? null : String.fromCharCodes(row.payload);
   }
 
@@ -52,6 +53,12 @@ class ShortigoDatabase extends _$ShortigoDatabase {
         category: 'settings',
       ),
     );
+  }
+
+  Future<void> deleteSetting(String key) {
+    return (delete(
+      cachedSeries,
+    )..where((row) => row.id.equals(_settingId(key)))).go();
   }
 
   Future<List<CachedSeriesRow>> readGuestFavorites() {
@@ -76,15 +83,16 @@ class ShortigoDatabase extends _$ShortigoDatabase {
   }
 
   Future<void> deleteGuestFavorite(String seriesId) {
-    return (delete(cachedSeries)
-          ..where((row) => row.id.equals(_guestFavoriteId(seriesId))))
-        .go();
+    return (delete(
+      cachedSeries,
+    )..where((row) => row.id.equals(_guestFavoriteId(seriesId)))).go();
   }
 
   Future<bool> hasGuestFavorite(String seriesId) async {
-    final row = await (select(cachedSeries)
-          ..where((table) => table.id.equals(_guestFavoriteId(seriesId))))
-        .getSingleOrNull();
+    final row =
+        await (select(cachedSeries)
+              ..where((table) => table.id.equals(_guestFavoriteId(seriesId))))
+            .getSingleOrNull();
     return row != null;
   }
 

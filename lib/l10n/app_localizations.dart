@@ -512,6 +512,30 @@ abstract class AppLocalizations {
   /// **'VIP purchases restored.'**
   String get subscriptionRestored;
 
+  /// No description provided for @subscriptionPurchaseSuccess.
+  ///
+  /// In en, this message translates to:
+  /// **'VIP is now active.'**
+  String get subscriptionPurchaseSuccess;
+
+  /// No description provided for @vipTestModeNotice.
+  ///
+  /// In en, this message translates to:
+  /// **'Test mode — no real payment will be made.'**
+  String get vipTestModeNotice;
+
+  /// No description provided for @resetVipTest.
+  ///
+  /// In en, this message translates to:
+  /// **'Reset VIP test'**
+  String get resetVipTest;
+
+  /// No description provided for @testVipReset.
+  ///
+  /// In en, this message translates to:
+  /// **'VIP test entitlement was reset.'**
+  String get testVipReset;
+
   /// No description provided for @noActiveVipPurchase.
   ///
   /// In en, this message translates to:

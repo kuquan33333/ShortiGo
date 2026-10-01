@@ -1,13 +1,33 @@
+import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
+import 'package:shortigo/core/env/env.dart';
 import 'package:shortigo/core/providers.dart';
+import 'package:shortigo/data/iap/test_iap_gateway.dart';
+import 'package:shortigo/data/local/shortigo_database.dart';
 import 'package:shortigo/domain/interfaces/iap_gateway.dart';
 import 'package:shortigo/features/subscription/application/subscription_notifier.dart';
 
 class _MockIapGateway extends Mock implements IapGateway {}
 
 void main() {
+  test('VIP test mode selects the local gateway', () async {
+    final database = ShortigoDatabase.forTesting(NativeDatabase.memory());
+    addTearDown(database.close);
+    final container = ProviderContainer(
+      overrides: [
+        appEnvProvider.overrideWithValue(Env.fromValues(vipTestMode: true)),
+        shortigoDatabaseProvider.overrideWithValue(database),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final gateway = container.read(iapGatewayProvider);
+    expect(gateway, isA<TestIapGateway>());
+    expect(await gateway.getOfferings(), hasLength(1));
+  });
+
   test('app uses one RevenueCat gateway instance through the provider', () {
     final container = ProviderContainer();
     addTearDown(container.dispose);
@@ -83,55 +103,59 @@ void main() {
     );
   });
 
-  test('purchase false is returned as a localizable code and keeps offerings',
-      () async {
-    final gateway = _MockIapGateway();
-    final offerings = [
-      IapOffering(
-        identifier: 'default',
-        packages: [IapPackage(identifier: 'monthly', priceString: '\$4.99')],
-      ),
-    ];
-    when(gateway.getOfferings).thenAnswer((_) async => offerings);
-    when(() => gateway.purchase('monthly')).thenAnswer((_) async => false);
-    final container = ProviderContainer(
-      overrides: [iapGatewayProvider.overrideWithValue(gateway)],
-    );
-    addTearDown(container.dispose);
+  test(
+    'purchase false is returned as a localizable code and keeps offerings',
+    () async {
+      final gateway = _MockIapGateway();
+      final offerings = [
+        IapOffering(
+          identifier: 'default',
+          packages: [IapPackage(identifier: 'monthly', priceString: '\$4.99')],
+        ),
+      ];
+      when(gateway.getOfferings).thenAnswer((_) async => offerings);
+      when(() => gateway.purchase('monthly')).thenAnswer((_) async => false);
+      final container = ProviderContainer(
+        overrides: [iapGatewayProvider.overrideWithValue(gateway)],
+      );
+      addTearDown(container.dispose);
 
-    await container.read(subscriptionNotifierProvider.future);
-    await container
-        .read(subscriptionNotifierProvider.notifier)
-        .purchase('monthly');
+      await container.read(subscriptionNotifierProvider.future);
+      await container
+          .read(subscriptionNotifierProvider.notifier)
+          .purchase('monthly');
 
-    final state = container.read(subscriptionNotifierProvider).requireValue;
-    expect(state.error, 'subscription-purchase-failed');
-    expect(state.offerings, same(offerings));
-  });
+      final state = container.read(subscriptionNotifierProvider).requireValue;
+      expect(state.error, 'subscription-purchase-failed');
+      expect(state.offerings, same(offerings));
+    },
+  );
 
-  test('successful purchase clears purchase error and keeps offerings',
-      () async {
-    final gateway = _MockIapGateway();
-    final offerings = [
-      IapOffering(
-        identifier: 'default',
-        packages: [IapPackage(identifier: 'monthly', priceString: '\$4.99')],
-      ),
-    ];
-    when(gateway.getOfferings).thenAnswer((_) async => offerings);
-    when(() => gateway.purchase('monthly')).thenAnswer((_) async => true);
-    final container = ProviderContainer(
-      overrides: [iapGatewayProvider.overrideWithValue(gateway)],
-    );
-    addTearDown(container.dispose);
+  test(
+    'successful purchase clears purchase error and keeps offerings',
+    () async {
+      final gateway = _MockIapGateway();
+      final offerings = [
+        IapOffering(
+          identifier: 'default',
+          packages: [IapPackage(identifier: 'monthly', priceString: '\$4.99')],
+        ),
+      ];
+      when(gateway.getOfferings).thenAnswer((_) async => offerings);
+      when(() => gateway.purchase('monthly')).thenAnswer((_) async => true);
+      final container = ProviderContainer(
+        overrides: [iapGatewayProvider.overrideWithValue(gateway)],
+      );
+      addTearDown(container.dispose);
 
-    await container.read(subscriptionNotifierProvider.future);
-    await container
-        .read(subscriptionNotifierProvider.notifier)
-        .purchase('monthly');
+      await container.read(subscriptionNotifierProvider.future);
+      await container
+          .read(subscriptionNotifierProvider.notifier)
+          .purchase('monthly');
 
-    final state = container.read(subscriptionNotifierProvider).requireValue;
-    expect(state.error, isNull);
-    expect(state.offerings, same(offerings));
-  });
+      final state = container.read(subscriptionNotifierProvider).requireValue;
+      expect(state.error, isNull);
+      expect(state.offerings, same(offerings));
+    },
+  );
 }

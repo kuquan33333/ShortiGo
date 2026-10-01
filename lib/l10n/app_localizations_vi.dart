@@ -224,6 +224,19 @@ class AppLocalizationsVi extends AppLocalizations {
   String get subscriptionRestored => 'Đã khôi phục giao dịch mua VIP.';
 
   @override
+  String get subscriptionPurchaseSuccess => 'VIP đã được kích hoạt.';
+
+  @override
+  String get vipTestModeNotice =>
+      'Chế độ thử nghiệm — không phát sinh thanh toán thật.';
+
+  @override
+  String get resetVipTest => 'Đặt lại VIP thử nghiệm';
+
+  @override
+  String get testVipReset => 'Đã đặt lại quyền VIP thử nghiệm.';
+
+  @override
   String get noActiveVipPurchase =>
       'Không tìm thấy giao dịch VIP đang hoạt động.';
 

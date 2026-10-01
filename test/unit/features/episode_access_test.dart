@@ -13,11 +13,16 @@ void main() {
 
   test('VIP lock remains exclusive', () {
     expect(
+      accessFor(_episode(isVipLocked: true, bonusUnlockCost: 60), user),
+      EpisodeAccessState.vipRequired,
+    );
+    expect(
       accessFor(
         _episode(isVipLocked: true, bonusUnlockCost: 60),
         user,
+        effectiveVip: true,
       ),
-      EpisodeAccessState.vipRequired,
+      EpisodeAccessState.open,
     );
   });
 
@@ -30,17 +35,27 @@ void main() {
     );
   });
 
-  test('provider locked and unavailable episodes never become ShortiGo VIP',
-      () {
-    expect(
-      accessFor(_episode(sourceLocked: true), user),
-      EpisodeAccessState.sourceLocked,
-    );
-    expect(
-      accessFor(_episode(sourceAvailable: false), user),
-      EpisodeAccessState.sourceUnavailable,
-    );
-  });
+  test(
+    'provider locked and unavailable episodes never become ShortiGo VIP',
+    () {
+      expect(
+        accessFor(_episode(sourceLocked: true), user),
+        EpisodeAccessState.sourceLocked,
+      );
+      expect(
+        accessFor(_episode(sourceAvailable: false), user),
+        EpisodeAccessState.sourceUnavailable,
+      );
+      expect(
+        accessFor(
+          _episode(sourceLocked: true, isVipLocked: true),
+          user,
+          effectiveVip: true,
+        ),
+        EpisodeAccessState.sourceLocked,
+      );
+    },
+  );
 }
 
 Episode _episode({

@@ -15,6 +15,7 @@ class Env {
     required this.revenueCatApiKeyAndroid,
     required this.rewardApiBaseUrl,
     required this.contentApiBaseUrl,
+    required this.vipTestMode,
   });
 
   final AppFlavor flavor;
@@ -28,6 +29,7 @@ class Env {
   final String revenueCatApiKeyAndroid;
   final String rewardApiBaseUrl;
   final String contentApiBaseUrl;
+  final bool vipTestMode;
 
   bool get isProd => flavor == AppFlavor.prod;
 
@@ -53,6 +55,7 @@ class Env {
     String revenueCatApiKeyAndroid = '',
     String rewardApiBaseUrl = '',
     String contentApiBaseUrl = '',
+    bool vipTestMode = false,
   }) {
     return Env._(
       flavor: flavor,
@@ -66,6 +69,7 @@ class Env {
       revenueCatApiKeyAndroid: revenueCatApiKeyAndroid,
       rewardApiBaseUrl: rewardApiBaseUrl,
       contentApiBaseUrl: contentApiBaseUrl,
+      vipTestMode: vipTestMode,
     );
   }
 
@@ -96,9 +100,7 @@ class Env {
     if (adMobRewardedUnitIdAndroid.isEmpty) {
       issues.add('ADMOB_REWARDED_ANDROID is empty.');
     } else if (adMobRewardedUnitIdAndroid == _googleTestRewardedUnitIdAndroid) {
-      issues.add(
-        'ADMOB_REWARDED_ANDROID is still the Google test ad unit ID.',
-      );
+      issues.add('ADMOB_REWARDED_ANDROID is still the Google test ad unit ID.');
     }
     if (revenueCatApiKeyIos.isEmpty) {
       issues.add('RC_API_KEY_IOS is empty.');
@@ -118,6 +120,10 @@ class Env {
   factory Env.fromDefines() {
     const flavorStr = String.fromEnvironment('ENV', defaultValue: 'dev');
     const flavor = flavorStr == 'prod' ? AppFlavor.prod : AppFlavor.dev;
+    const vipTestModeValue = String.fromEnvironment(
+      'VIP_TEST_MODE',
+      defaultValue: 'false',
+    );
 
     return Env.fromValues(
       flavor: flavor,
@@ -125,10 +131,7 @@ class Env {
         'FIREBASE_PROJECT_ID',
         defaultValue: 'shortigo-prod',
       ),
-      sentryDsn: const String.fromEnvironment(
-        'SENTRY_DSN',
-        defaultValue: '',
-      ),
+      sentryDsn: const String.fromEnvironment('SENTRY_DSN', defaultValue: ''),
       adMobAppIdIos: const String.fromEnvironment(
         'ADMOB_APP_ID_IOS',
         defaultValue: _googleTestAdMobAppIdIos,
@@ -161,6 +164,7 @@ class Env {
         'CONTENT_API_BASE_URL',
         defaultValue: '',
       ),
+      vipTestMode: vipTestModeValue == 'true',
     );
   }
 
@@ -172,14 +176,23 @@ class Env {
   bool operator ==(Object other) =>
       other is Env &&
       other.flavor == flavor &&
-      other.firebaseProjectId == firebaseProjectId;
+      other.firebaseProjectId == firebaseProjectId &&
+      other.vipTestMode == vipTestMode;
 
   @override
-  int get hashCode => Object.hash(flavor, firebaseProjectId);
+  int get hashCode => Object.hash(flavor, firebaseProjectId, vipTestMode);
 }
 
 /// Global singleton; initialized in main().
 late final Env env;
+bool _envInitialized = false;
 
 @visibleForTesting
 Env debugEnv = Env.fromDefines();
+
+void initializeEnv(Env value) {
+  env = value;
+  _envInitialized = true;
+}
+
+Env get activeEnv => _envInitialized ? env : debugEnv;

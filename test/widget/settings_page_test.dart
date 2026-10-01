@@ -86,4 +86,24 @@ void main() {
     expect(await client.configuredBaseUrl, 'https://old.example.com');
     expect(find.text('Máy chủ trả về dữ liệu không hợp lệ.'), findsOneWidget);
   });
+
+  testWidgets('blank default can be restored after saving a runtime source',
+      (tester) async {
+    final client = ContentApiClient(
+      defaultBaseUrl: '',
+      httpClient: MockClient((_) async => _statusResponse()),
+    );
+    await tester.pumpWidget(_app(client));
+    await tester.pumpAndSettle();
+
+    await tester.enterText(
+        find.byType(TextField), 'https://server-b.example.com');
+    await tester.tap(find.text('Lưu'));
+    await tester.pumpAndSettle();
+    expect(await client.configuredBaseUrl, 'https://server-b.example.com');
+
+    await tester.tap(find.text('Khôi phục mặc định'));
+    await tester.pumpAndSettle();
+    expect(await client.configuredBaseUrl, isNull);
+  });
 }

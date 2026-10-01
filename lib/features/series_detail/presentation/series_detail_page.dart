@@ -34,6 +34,8 @@ class SeriesDetailPage extends ConsumerWidget {
         data: (state) {
           final series = state.series;
           final user = ref.watch(currentAppUserDocProvider).value;
+          final effectiveVip =
+              ref.watch(effectiveVipProvider).value ?? user?.isVip ?? false;
           if (series == null) {
             return Center(child: Text(l10n.seriesNotFound));
           }
@@ -99,14 +101,17 @@ class SeriesDetailPage extends ConsumerWidget {
                         Text(
                           '${l10n.episodeCount(series.episodeCount)} - '
                           '${_categoryLabel(l10n, series.category)}',
-                          style:
-                              const TextStyle(color: AppColors.textSecondary),
+                          style: const TextStyle(
+                            color: AppColors.textSecondary,
+                          ),
                         ),
                         const SizedBox(height: 8),
                         Text(series.description),
                         const SizedBox(height: 16),
                         SaveSeriesFilledButton(
-                            seriesId: series.id, series: series),
+                          seriesId: series.id,
+                          series: series,
+                        ),
                       ],
                     ),
                   ),
@@ -151,39 +156,50 @@ class SeriesDetailPage extends ConsumerWidget {
                       subtitle: episode.durationSec > 0
                           ? Text(l10n.durationSeconds(episode.durationSec))
                           : null,
-                      trailing: switch (accessFor(episode, user)) {
-                        EpisodeAccessState.vipRequired =>
-                          const Icon(Icons.lock, color: AppColors.vipGold),
+                      trailing: switch (accessFor(
+                        episode,
+                        user,
+                        effectiveVip: effectiveVip,
+                      )) {
+                        EpisodeAccessState.vipRequired => const Icon(
+                          Icons.lock,
+                          color: AppColors.vipGold,
+                        ),
                         EpisodeAccessState.bonusRequired => Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(
-                                Icons.bolt,
-                                size: 18,
-                                color: AppColors.vipGold,
-                              ),
-                              Text(
-                                '${episode.bonusUnlockCost}',
-                                style:
-                                    const TextStyle(color: AppColors.vipGold),
-                              ),
-                            ],
-                          ),
-                        EpisodeAccessState.open =>
-                          const Icon(Icons.play_circle_outline),
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.bolt,
+                              size: 18,
+                              color: AppColors.vipGold,
+                            ),
+                            Text(
+                              '${episode.bonusUnlockCost}',
+                              style: const TextStyle(color: AppColors.vipGold),
+                            ),
+                          ],
+                        ),
+                        EpisodeAccessState.open => const Icon(
+                          Icons.play_circle_outline,
+                        ),
                         EpisodeAccessState.sourceLocked => Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.lock_outline),
-                              const SizedBox(width: 4),
-                              Text(l10n.sourceLockedShort),
-                            ],
-                          ),
-                        EpisodeAccessState.sourceUnavailable =>
-                          const Icon(Icons.warning_amber_rounded),
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.lock_outline),
+                            const SizedBox(width: 4),
+                            Text(l10n.sourceLockedShort),
+                          ],
+                        ),
+                        EpisodeAccessState.sourceUnavailable => const Icon(
+                          Icons.warning_amber_rounded,
+                        ),
                       },
                       onTap: () {
-                        final access = accessFor(episode, user);
+                        final access = accessFor(
+                          episode,
+                          user,
+                          effectiveVip: effectiveVip,
+                        );
                         if (access == EpisodeAccessState.sourceLocked ||
                             access == EpisodeAccessState.sourceUnavailable) {
                           return;

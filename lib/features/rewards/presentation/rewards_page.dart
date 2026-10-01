@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/error/friendly_error.dart';
+import '../../../core/providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../domain/interfaces/ad_gateway.dart';
 import '../../../shared/widgets/error_view.dart';
@@ -33,6 +34,8 @@ class RewardsPage extends ConsumerWidget {
           }
 
           final user = state.user;
+          final effectiveVip =
+              ref.watch(effectiveVipProvider).value ?? user?.isVip ?? false;
           final bonus = user?.bonus ?? 0;
           final progress = RewardProgress.fromBonus(bonus);
 
@@ -48,9 +51,7 @@ class RewardsPage extends ConsumerWidget {
                 ),
               ),
               const SizedBox(height: 10),
-              _DailyCheckIn(
-                claimed: _claimedToday(user?.lastDailyCheckIn),
-              ),
+              _DailyCheckIn(claimed: _claimedToday(user?.lastDailyCheckIn)),
               const SizedBox(height: 16),
               _WatchAd(
                 isWatching: state.isWatchingAd,
@@ -65,7 +66,7 @@ class RewardsPage extends ConsumerWidget {
               const SizedBox(height: 24),
               _SectionTitle(title: l10n.achievements),
               const SizedBox(height: 10),
-              _Achievements(bonus: bonus, isVip: user?.isVip ?? false),
+              _Achievements(bonus: bonus, isVip: effectiveVip),
               if (state.error != null) ...[
                 const SizedBox(height: 12),
                 Text(
@@ -118,16 +119,10 @@ class _SignInRewards extends StatelessWidget {
             Text(
               l10n.signInToUse,
               textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.w700,
-              ),
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 6),
-            Text(
-              l10n.guestMessage,
-              textAlign: TextAlign.center,
-            ),
+            Text(l10n.guestMessage, textAlign: TextAlign.center),
             const SizedBox(height: 16),
             FilledButton(
               onPressed: () => context.push('/login'),
@@ -190,9 +185,8 @@ class _BonusHeader extends StatelessWidget {
           Text(
             progress.remaining == 0
                 ? AppLocalizations.of(context)!.enoughToUnlock
-                : AppLocalizations.of(context)!.bonusUntilNext(
-                    progress.remaining,
-                  ),
+                : AppLocalizations.of(context)!
+                      .bonusUntilNext(progress.remaining),
             style: const TextStyle(color: Colors.white),
           ),
         ],

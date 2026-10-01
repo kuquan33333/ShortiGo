@@ -24,10 +24,7 @@ class EpisodePlayerPage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final args = EpisodePlayerArgs(
-      seriesId: seriesId,
-      episodeId: episodeId,
-    );
+    final args = EpisodePlayerArgs(seriesId: seriesId, episodeId: episodeId);
     final async = ref.watch(episodePlayerNotifierProvider(args));
 
     return Scaffold(
@@ -41,25 +38,20 @@ class EpisodePlayerPage extends ConsumerWidget {
         data: (state) {
           final l10n = AppLocalizations.of(context)!;
           final user = ref.watch(currentAppUserDocProvider).value;
+          final effectiveVip =
+              ref.watch(effectiveVipProvider).value ?? user?.isVip ?? false;
           final episode = state.episode;
           final access = episode == null
               ? EpisodeAccessState.open
-              : accessFor(episode, user);
+              : accessFor(episode, user, effectiveVip: effectiveVip);
           if (access == EpisodeAccessState.vipRequired) {
             return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(
-                    Icons.lock,
-                    size: 64,
-                    color: AppColors.vipGold,
-                  ),
+                  const Icon(Icons.lock, size: 64, color: AppColors.vipGold),
                   const SizedBox(height: 16),
-                  Text(
-                    l10n.vipEpisode,
-                    style: TextStyle(color: Colors.white),
-                  ),
+                  Text(l10n.vipEpisode, style: TextStyle(color: Colors.white)),
                   const SizedBox(height: 16),
                   FilledButton(
                     onPressed: () => context.push('/subscribe'),
@@ -173,9 +165,7 @@ class _BonusUnlock extends StatelessWidget {
             FilledButton.icon(
               onPressed: canAfford ? onUnlock : () => context.go('/rewards'),
               icon: Icon(canAfford ? Icons.bolt : Icons.card_giftcard),
-              label: Text(
-                canAfford ? l10n.unlockThisEpisode : l10n.earnBonus,
-              ),
+              label: Text(canAfford ? l10n.unlockThisEpisode : l10n.earnBonus),
             ),
           ],
         ),

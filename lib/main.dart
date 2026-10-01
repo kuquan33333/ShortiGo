@@ -16,10 +16,8 @@ import 'core/providers.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await SystemChrome.setPreferredOrientations([
-    DeviceOrientation.portraitUp,
-  ]);
-  env = Env.fromDefines();
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp]);
+  initializeEnv(Env.fromDefines());
   if (env.hasReleaseBlockingIssues) {
     debugPrint(
       'ShortiGo release blockers:\n'
@@ -42,9 +40,7 @@ Future<void> main() async {
     fb.FirebaseAuth.instance.authStateChanges().listen(_onAuthStateChanged);
   }
   runApp(
-    ProviderScope(
-      child: ShortiGoApp(router: buildRouter(requireAuth: false)),
-    ),
+    ProviderScope(child: ShortiGoApp(router: buildRouter(requireAuth: false))),
   );
 
   WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -53,10 +49,12 @@ Future<void> main() async {
         options.dsn = env.sentryDsn;
       });
     }
-    await revenueCatGateway.initialize(
-      appleApiKey: env.revenueCatApiKeyIos,
-      googleApiKey: env.revenueCatApiKeyAndroid,
-    );
+    if (!env.vipTestMode) {
+      await revenueCatGateway.initialize(
+        appleApiKey: env.revenueCatApiKeyIos,
+        googleApiKey: env.revenueCatApiKeyAndroid,
+      );
+    }
   });
 }
 

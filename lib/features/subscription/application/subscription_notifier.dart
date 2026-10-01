@@ -42,7 +42,13 @@ class SubscriptionNotifier extends AsyncNotifier<SubscriptionState> {
         return;
       }
       ref.invalidate(profileNotifierProvider);
-      state = AsyncData(SubscriptionState(offerings: offerings));
+      ref.invalidate(effectiveVipProvider);
+      state = AsyncData(
+        SubscriptionState(
+          offerings: offerings,
+          message: 'subscription-purchased',
+        ),
+      );
     } catch (error) {
       state = AsyncData(
         SubscriptionState(
@@ -55,22 +61,19 @@ class SubscriptionNotifier extends AsyncNotifier<SubscriptionState> {
 
   Future<void> restorePurchases() async {
     final offerings = state.value?.offerings ?? const <IapOffering>[];
-    state = AsyncData(
-      SubscriptionState(
-        offerings: offerings,
-        isLoading: true,
-      ),
-    );
+    state = AsyncData(SubscriptionState(offerings: offerings, isLoading: true));
     try {
       final restored = await ref.read(iapGatewayProvider).restorePurchases();
       if (restored) {
         ref.invalidate(profileNotifierProvider);
+        ref.invalidate(effectiveVipProvider);
       }
       state = AsyncData(
         SubscriptionState(
           offerings: offerings,
-          message:
-              restored ? 'subscription-restored' : 'no-active-vip-purchase',
+          message: restored
+              ? 'subscription-restored'
+              : 'no-active-vip-purchase',
         ),
       );
     } catch (error) {
@@ -82,9 +85,22 @@ class SubscriptionNotifier extends AsyncNotifier<SubscriptionState> {
       );
     }
   }
+
+  Future<void> resetTestVip() async {
+    if (!ref.read(vipTestModeProvider)) {
+      return;
+    }
+    final offerings = state.value?.offerings ?? const <IapOffering>[];
+    await ref.read(testVipEntitlementStoreProvider).reset();
+    ref.invalidate(effectiveVipProvider);
+    ref.invalidate(profileNotifierProvider);
+    state = AsyncData(
+      SubscriptionState(offerings: offerings, message: 'test-vip-reset'),
+    );
+  }
 }
 
 final subscriptionNotifierProvider =
     AsyncNotifierProvider<SubscriptionNotifier, SubscriptionState>(
-  SubscriptionNotifier.new,
-);
+      SubscriptionNotifier.new,
+    );

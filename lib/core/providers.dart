@@ -8,6 +8,8 @@ import '../data/ads/admob_ad_gateway.dart';
 import '../data/firestore/transaction_repository.dart';
 import '../data/firestore/user_repository.dart';
 import '../data/iap/revenuecat_iap_gateway.dart';
+import '../data/iap/test_iap_gateway.dart';
+import '../data/iap/test_vip_entitlement_store.dart';
 import '../data/social/firestore_social_actions_gateway.dart';
 import '../data/rewards/firestore_reward_gateway.dart';
 import '../data/local/shortigo_database.dart';
@@ -30,8 +32,15 @@ import '../domain/interfaces/video_source.dart';
 
 // === Foundational providers (always available) ===
 
-final firebaseAvailableProvider =
-    Provider<bool>((_) => FirebaseBootstrap.isAvailable);
+final firebaseAvailableProvider = Provider<bool>(
+  (_) => FirebaseBootstrap.isAvailable,
+);
+
+final appEnvProvider = Provider<Env>((_) => activeEnv);
+
+final vipTestModeProvider = Provider<bool>(
+  (ref) => ref.watch(appEnvProvider).vipTestMode,
+);
 
 final firestoreProvider = Provider<FirebaseFirestore>((_) {
   if (!FirebaseBootstrap.isAvailable) {
@@ -64,20 +73,23 @@ final shortigoDatabaseProvider = Provider<ShortigoDatabase>((_) {
   return ShortigoDatabase();
 });
 
-final guestFavoritesRepositoryProvider =
-    Provider<GuestFavoritesRepository>((ref) {
+final guestFavoritesRepositoryProvider = Provider<GuestFavoritesRepository>((
+  ref,
+) {
   return GuestFavoritesRepository(ref.watch(shortigoDatabaseProvider));
 });
 
-final guestFavoriteSavedProvider =
-    FutureProvider.family<bool, String>((ref, id) {
+final guestFavoriteSavedProvider = FutureProvider.family<bool, String>((
+  ref,
+  id,
+) {
   return ref.watch(guestFavoritesRepositoryProvider).contains(id);
 });
 
 final contentApiClientProvider = Provider<ContentApiClient>((ref) {
   return ContentApiClient(
     database: ref.watch(shortigoDatabaseProvider),
-    defaultBaseUrl: env.contentApiBaseUrl,
+    defaultBaseUrl: ref.watch(appEnvProvider).contentApiBaseUrl,
   );
 });
 
@@ -121,7 +133,7 @@ final adStatusProvider = StreamProvider<AdStatus>((ref) {
 });
 
 final rewardGatewayProvider = Provider<RewardGateway>((ref) {
-  if (env.rewardApiBaseUrl.isEmpty) {
+  if (ref.watch(appEnvProvider).rewardApiBaseUrl.isEmpty) {
     return FirestoreRewardGateway(
       db: ref.watch(firestoreProvider),
       userId: ref.watch(firebaseAuthProvider).currentUser?.uid,
@@ -129,13 +141,36 @@ final rewardGatewayProvider = Provider<RewardGateway>((ref) {
   }
   return RewardApiGateway(
     auth: ref.watch(firebaseAuthProvider),
-    baseUrl: env.rewardApiBaseUrl,
+    baseUrl: ref.watch(appEnvProvider).rewardApiBaseUrl,
   );
 });
 
 final revenueCatGateway = RevenueCatIapGateway();
 
-final iapGatewayProvider = Provider<IapGateway>((_) => revenueCatGateway);
+final testVipEntitlementStoreProvider = Provider<TestVipEntitlementStore>((
+  ref,
+) {
+  return TestVipEntitlementStore(
+    database: ref.watch(shortigoDatabaseProvider),
+    accountId: () => ref.read(currentAuthUserProvider).value?.uid,
+  );
+});
+
+final effectiveVipProvider = FutureProvider<bool>((ref) async {
+  final user = ref.watch(currentAppUserDocProvider).value;
+  final productionVip = user?.isVip ?? false;
+  if (productionVip || !ref.watch(vipTestModeProvider)) {
+    return productionVip;
+  }
+  return ref.read(testVipEntitlementStoreProvider).isActive();
+});
+
+final iapGatewayProvider = Provider<IapGateway>((ref) {
+  if (ref.watch(vipTestModeProvider)) {
+    return TestIapGateway(ref.watch(testVipEntitlementStoreProvider));
+  }
+  return revenueCatGateway;
+});
 
 // === Future providers (added in their respective milestones) ===
 // M6: adminConfigGatewayProvider

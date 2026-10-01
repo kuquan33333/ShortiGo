@@ -225,6 +225,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get subscriptionRestored => 'VIP purchases restored.';
 
   @override
+  String get subscriptionPurchaseSuccess => 'VIP is now active.';
+
+  @override
+  String get vipTestModeNotice => 'Test mode — no real payment will be made.';
+
+  @override
+  String get resetVipTest => 'Reset VIP test';
+
+  @override
+  String get testVipReset => 'VIP test entitlement was reset.';
+
+  @override
   String get noActiveVipPurchase => 'No active VIP purchase was found.';
 
   @override

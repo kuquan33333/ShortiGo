@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/friendly_error.dart';
+import '../../../core/providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/loading_view.dart';
@@ -15,6 +16,7 @@ class SubscribePage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(subscriptionNotifierProvider);
     final l10n = AppLocalizations.of(context)!;
+    final testMode = ref.watch(vipTestModeProvider);
 
     return Scaffold(
       appBar: AppBar(title: Text(l10n.subscribeToVip)),
@@ -52,6 +54,13 @@ class SubscribePage extends ConsumerWidget {
                       l10n.vipBenefits,
                       style: TextStyle(color: Colors.white70),
                     ),
+                    if (testMode) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        l10n.vipTestModeNotice,
+                        style: const TextStyle(color: Colors.white),
+                      ),
+                    ],
                   ],
                 ),
               ),
@@ -65,15 +74,15 @@ class SubscribePage extends ConsumerWidget {
                   ),
                 )
               else
-                ...state.offerings.expand((offering) => offering.packages).map(
+                ...state.offerings
+                    .expand((offering) => offering.packages)
+                    .map(
                       (package) => Card(
                         child: ListTile(
                           title: Text(package.identifier),
                           trailing: Text(
                             package.priceString,
-                            style: const TextStyle(
-                              fontWeight: FontWeight.w700,
-                            ),
+                            style: const TextStyle(fontWeight: FontWeight.w700),
                           ),
                           onTap: () {
                             ref
@@ -95,6 +104,16 @@ class SubscribePage extends ConsumerWidget {
                 icon: const Icon(Icons.restore),
                 label: Text(l10n.restorePurchases),
               ),
+              if (testMode)
+                TextButton.icon(
+                  onPressed: state.isLoading
+                      ? null
+                      : () => ref
+                            .read(subscriptionNotifierProvider.notifier)
+                            .resetTestVip(),
+                  icon: const Icon(Icons.restart_alt),
+                  label: Text(l10n.resetVipTest),
+                ),
               if (state.message != null) ...[
                 const SizedBox(height: 12),
                 Text(
@@ -121,6 +140,8 @@ class SubscribePage extends ConsumerWidget {
     return switch (code) {
       'subscription-restored' => l10n.subscriptionRestored,
       'no-active-vip-purchase' => l10n.noActiveVipPurchase,
+      'subscription-purchased' => l10n.subscriptionPurchaseSuccess,
+      'test-vip-reset' => l10n.testVipReset,
       _ => code,
     };
   }

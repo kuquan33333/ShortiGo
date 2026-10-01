@@ -139,7 +139,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
             keyboardType: TextInputType.url,
             autocorrect: false,
             decoration: const InputDecoration(
-              hintText: 'https://example.vercel.app',
+              hintText: 'https://api.example.com',
               border: OutlineInputBorder(),
             ),
           ),
@@ -171,13 +171,11 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
               ),
             ],
           ),
-          if (ref.read(contentApiClientProvider).defaultBaseUrl != null) ...[
-            const SizedBox(height: 8),
-            TextButton(
-              onPressed: _restoreDefault,
-              child: Text(l10n.restoreDefault),
-            ),
-          ],
+          const SizedBox(height: 8),
+          TextButton(
+            onPressed: _restoreDefault,
+            child: Text(l10n.restoreDefault),
+          ),
           if (_error != null) ...[
             const SizedBox(height: 12),
             Text(_error!,

@@ -17,10 +17,7 @@ class EpisodePlayerState {
 }
 
 class EpisodePlayerArgs {
-  const EpisodePlayerArgs({
-    required this.seriesId,
-    required this.episodeId,
-  });
+  const EpisodePlayerArgs({required this.seriesId, required this.episodeId});
 
   final String seriesId;
   final String episodeId;
@@ -56,7 +53,8 @@ class EpisodePlayerNotifier
       }
 
       final user = ref.read(currentAppUserDocProvider).value;
-      final access = accessFor(episode, user);
+      final effectiveVip = await ref.read(effectiveVipProvider.future);
+      final access = accessFor(episode, user, effectiveVip: effectiveVip);
       if (access != EpisodeAccessState.open) {
         return EpisodePlayerState(episode: episode);
       }
@@ -93,7 +91,9 @@ class EpisodePlayerNotifier
   }
 }
 
-final episodePlayerNotifierProvider = AsyncNotifierProvider.family<
-    EpisodePlayerNotifier, EpisodePlayerState, EpisodePlayerArgs>(
-  EpisodePlayerNotifier.new,
-);
+final episodePlayerNotifierProvider =
+    AsyncNotifierProvider.family<
+      EpisodePlayerNotifier,
+      EpisodePlayerState,
+      EpisodePlayerArgs
+    >(EpisodePlayerNotifier.new);

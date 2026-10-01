@@ -3,6 +3,11 @@ import 'package:shortigo/core/env/env.dart';
 
 void main() {
   group('Env release readiness', () {
+    test('VIP test mode is opt-in and disabled by default', () {
+      expect(Env.fromValues().vipTestMode, isFalse);
+      expect(Env.fromValues(vipTestMode: true).vipTestMode, isTrue);
+    });
+
     test('prod defaults report release-blocking placeholder configuration', () {
       final env = Env.fromValues(flavor: AppFlavor.prod);
 
