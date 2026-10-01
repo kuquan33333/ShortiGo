@@ -22,6 +22,12 @@ abstract class Series with _$Series {
     @Default(0) int saveCount,
     @Default(0) int followerCount,
     @Default(true) bool isPublished,
+    @Default(<String>[]) List<String> genres,
+    @Default(<String>[]) List<String> tags,
+    @Default(false) bool isNew,
+    @Default(false) bool isDubbed,
+    String? audioType,
+    String? provider,
   }) = _Series;
 
   factory Series.fromJson(Map<String, dynamic> json) => _$SeriesFromJson(json);

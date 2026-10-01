@@ -84,6 +84,16 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
         setState(() => _hasError = true);
       case BetterPlayerEventType.progress:
       case BetterPlayerEventType.finished:
+        if (event.betterPlayerEventType == BetterPlayerEventType.finished &&
+            _current <
+                (ref.read(shortsFeedNotifierProvider).value?.episodes.length ??
+                        0) -
+                    1) {
+          unawaited(_pageController.nextPage(
+            duration: const Duration(milliseconds: 260),
+            curve: Curves.easeOutCubic,
+          ));
+        }
         final next = _progressFromEvent(event);
         if (next != null && (next - _playbackProgress).abs() > 0.001) {
           setState(() => _playbackProgress = next);
@@ -163,8 +173,7 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
                       user,
                       effectiveVip: effectiveVip,
                     );
-                    final showPlayer =
-                        isActive &&
+                    final showPlayer = isActive &&
                         _playerMounted &&
                         access == EpisodeAccessState.open;
 
@@ -242,8 +251,7 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
                 right: 0,
                 child: ShortsVideoProgressBar(
                   progress: _playbackProgress,
-                  visible:
-                      _playerMounted &&
+                  visible: _playerMounted &&
                       !_isLoading &&
                       !_hasError &&
                       accessFor(
@@ -263,6 +271,13 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
                     key: ValueKey('shorts_info_${series.id}'),
                     series: series,
                     episode: activeEpisode,
+                    onTitle: () => context.push('/series/${series.id}'),
+                    onWatchAll: () {
+                      unawaited(_safePause());
+                      context.push(
+                        '/watch/${series.id}?episodeId=${Uri.encodeComponent(activeEpisode.id)}',
+                      );
+                    },
                   ),
                 ),
               if (series != null)
@@ -388,9 +403,7 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
   Future<String> _urlFor(Episode episode) {
     return _urlCache.getOrCreate(
       episode.id,
-      () => ref
-          .read(videoSourceProvider)
-          .playableUrl(
+      () => ref.read(videoSourceProvider).playableUrl(
             seriesId: episode.seriesId,
             episodeId: episode.id,
             storagePath: episode.videoUrl,

@@ -7,7 +7,7 @@ import '../../features/auth/presentation/login_page.dart';
 import '../../features/splash/presentation/splash_page.dart';
 import '../../features/discover/presentation/discover_page.dart';
 import '../../features/collection/presentation/collection_page.dart';
-import '../../features/episode_player/presentation/episode_player_page.dart';
+import '../../features/episode_player/presentation/main_player_page.dart';
 import '../../features/my_list/presentation/my_list_page.dart';
 import '../../features/onboarding/presentation/onboarding_page.dart';
 import '../../features/profile/presentation/profile_page.dart';
@@ -74,13 +74,6 @@ GoRouter buildRouter({
               seriesId: state.pathParameters['id']!,
             ),
           ),
-          GoRoute(
-            path: '/player/:seriesId/:episodeId',
-            builder: (_, state) => EpisodePlayerPage(
-              seriesId: state.pathParameters['seriesId']!,
-              episodeId: state.pathParameters['episodeId']!,
-            ),
-          ),
         ],
       ),
       GoRoute(
@@ -102,6 +95,22 @@ GoRouter buildRouter({
       GoRoute(
         path: '/search',
         builder: (_, __) => const SearchPage(),
+      ),
+      // Full-screen player routes intentionally live outside ShellRoute so
+      // the five-tab navigation never covers the video viewport.
+      GoRoute(
+        path: '/watch/:seriesId',
+        builder: (_, state) => MainPlayerPage(
+          seriesId: state.pathParameters['seriesId']!,
+          episodeId: state.uri.queryParameters['episodeId'],
+        ),
+      ),
+      GoRoute(
+        path: '/player/:seriesId/:episodeId',
+        builder: (_, state) => MainPlayerPage(
+          seriesId: state.pathParameters['seriesId']!,
+          episodeId: state.pathParameters['episodeId'],
+        ),
       ),
     ],
   );

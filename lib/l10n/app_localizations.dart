@@ -1153,6 +1153,114 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'This content API is incompatible. Please update the server.'**
   String get apiIncompatibleError;
+
+  /// No description provided for @watchAll.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch all'**
+  String get watchAll;
+
+  /// No description provided for @chooseEpisode.
+  ///
+  /// In en, this message translates to:
+  /// **'Choose episode'**
+  String get chooseEpisode;
+
+  /// No description provided for @intro.
+  ///
+  /// In en, this message translates to:
+  /// **'Introduction'**
+  String get intro;
+
+  /// No description provided for @collapse.
+  ///
+  /// In en, this message translates to:
+  /// **'Collapse'**
+  String get collapse;
+
+  /// No description provided for @ended.
+  ///
+  /// In en, this message translates to:
+  /// **'End of series'**
+  String get ended;
+
+  /// No description provided for @episodeLabel.
+  ///
+  /// In en, this message translates to:
+  /// **'Episode {count}'**
+  String episodeLabel(Object count);
+
+  /// No description provided for @share.
+  ///
+  /// In en, this message translates to:
+  /// **'Share'**
+  String get share;
+
+  /// No description provided for @like.
+  ///
+  /// In en, this message translates to:
+  /// **'Like'**
+  String get like;
+
+  /// No description provided for @views.
+  ///
+  /// In en, this message translates to:
+  /// **'{count} views'**
+  String views(Object count);
+
+  /// No description provided for @speed.
+  ///
+  /// In en, this message translates to:
+  /// **'Speed'**
+  String get speed;
+
+  /// No description provided for @more.
+  ///
+  /// In en, this message translates to:
+  /// **'More'**
+  String get more;
+
+  /// No description provided for @hotTab.
+  ///
+  /// In en, this message translates to:
+  /// **'Hot'**
+  String get hotTab;
+
+  /// No description provided for @newTab.
+  ///
+  /// In en, this message translates to:
+  /// **'New releases'**
+  String get newTab;
+
+  /// No description provided for @ranking.
+  ///
+  /// In en, this message translates to:
+  /// **'Ranking'**
+  String get ranking;
+
+  /// No description provided for @categories.
+  ///
+  /// In en, this message translates to:
+  /// **'Categories'**
+  String get categories;
+
+  /// No description provided for @similarContent.
+  ///
+  /// In en, this message translates to:
+  /// **'More like this'**
+  String get similarContent;
+
+  /// No description provided for @noDescription.
+  ///
+  /// In en, this message translates to:
+  /// **'No description available.'**
+  String get noDescription;
+
+  /// No description provided for @lockedEpisode.
+  ///
+  /// In en, this message translates to:
+  /// **'This episode is locked at the source.'**
+  String get lockedEpisode;
 }
 
 class _AppLocalizationsDelegate

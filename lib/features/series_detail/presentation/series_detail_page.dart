@@ -4,14 +4,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../core/error/friendly_error.dart';
-import '../../../core/providers.dart';
 import '../../../core/theme/app_colors.dart';
-import '../../../domain/entities/category.dart';
+import '../../../domain/entities/episode.dart';
+import '../../../domain/entities/series.dart';
+import '../../../l10n/app_localizations.dart';
+import '../../../shared/format/compact_count.dart';
+import '../../../shared/widgets/episode_picker_grid.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/loading_view.dart';
 import '../../../shared/widgets/save_series_button.dart';
-import '../../../l10n/app_localizations.dart';
-import '../../episode_player/application/episode_access.dart';
 import '../application/series_detail_notifier.dart';
 
 class SeriesDetailPage extends ConsumerWidget {
@@ -22,9 +23,17 @@ class SeriesDetailPage extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(seriesDetailNotifierProvider(seriesId));
-    final l10n = AppLocalizations.of(context)!;
-
     return Scaffold(
+      appBar: AppBar(
+        title: Text(AppLocalizations.of(context)!.info),
+        actions: [
+          IconButton(
+            tooltip: AppLocalizations.of(context)!.watchAll,
+            onPressed: () => context.push('/watch/$seriesId'),
+            icon: const Icon(Icons.play_arrow_rounded),
+          ),
+        ],
+      ),
       body: async.when(
         loading: () => const LoadingView(),
         error: (error, _) => ErrorView(
@@ -33,210 +42,173 @@ class SeriesDetailPage extends ConsumerWidget {
         ),
         data: (state) {
           final series = state.series;
-          final user = ref.watch(currentAppUserDocProvider).value;
-          final effectiveVip =
-              ref.watch(effectiveVipProvider).value ?? user?.isVip ?? false;
           if (series == null) {
-            return Center(child: Text(l10n.seriesNotFound));
+            return Center(
+                child: Text(AppLocalizations.of(context)!.seriesNotFound));
           }
-
-          return RefreshIndicator(
-            onRefresh: () async {
-              ref.invalidate(seriesDetailNotifierProvider(seriesId));
-              await ref.read(seriesDetailNotifierProvider(seriesId).future);
-            },
-            child: CustomScrollView(
-              physics: const AlwaysScrollableScrollPhysics(),
-              slivers: [
-                SliverAppBar(
-                  expandedHeight: 320,
-                  pinned: true,
-                  backgroundColor: AppColors.bg,
-                  flexibleSpace: FlexibleSpaceBar(
-                    background: Stack(
-                      fit: StackFit.expand,
-                      children: [
-                        if (series.coverUrl.isNotEmpty)
-                          CachedNetworkImage(
-                            imageUrl: series.coverUrl,
-                            fit: BoxFit.cover,
-                            placeholder: (_, __) => const ColoredBox(
-                              color: AppColors.surface,
-                              child: Center(child: Icon(Icons.movie_outlined)),
-                            ),
-                            errorWidget: (_, __, ___) => const ColoredBox(
-                              color: AppColors.surface,
-                              child: Center(child: Icon(Icons.movie_outlined)),
-                            ),
-                          )
-                        else
-                          const ColoredBox(
-                            color: AppColors.surface,
-                            child: Center(child: Icon(Icons.movie_outlined)),
-                          ),
-                        const DecoratedBox(
-                          decoration: BoxDecoration(
-                            gradient: LinearGradient(
-                              begin: Alignment.topCenter,
-                              end: Alignment.bottomCenter,
-                              colors: [Colors.transparent, AppColors.bg],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                SliverToBoxAdapter(
-                  child: Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          series.title,
-                          style: Theme.of(context).textTheme.headlineSmall,
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          '${l10n.episodeCount(series.episodeCount)} - '
-                          '${_categoryLabel(l10n, series.category)}',
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(series.description),
-                        const SizedBox(height: 16),
-                        SaveSeriesFilledButton(
-                          seriesId: series.id,
-                          series: series,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                SliverList.builder(
-                  itemCount: state.episodes.length,
-                  itemBuilder: (_, index) {
-                    final episode = state.episodes[index];
-
-                    return ListTile(
-                      leading: SizedBox(
-                        width: 64,
-                        height: 64,
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: episode.thumbnailUrl.isEmpty
-                              ? const ColoredBox(
-                                  color: AppColors.surface,
-                                  child: Icon(Icons.movie_outlined),
-                                )
-                              : CachedNetworkImage(
-                                  imageUrl: episode.thumbnailUrl,
-                                  fit: BoxFit.cover,
-                                  placeholder: (_, __) => const ColoredBox(
-                                    color: AppColors.surface,
-                                    child: Center(
-                                      child: Icon(Icons.movie_outlined),
-                                    ),
-                                  ),
-                                  errorWidget: (_, __, ___) => const ColoredBox(
-                                    color: AppColors.surface,
-                                    child: Icon(Icons.movie_outlined),
-                                  ),
-                                ),
-                        ),
-                      ),
-                      title: Text(
-                        episode.chapterName?.trim().isNotEmpty == true
-                            ? episode.chapterName!.trim()
-                            : 'EP.${episode.order}',
-                      ),
-                      subtitle: episode.durationSec > 0
-                          ? Text(l10n.durationSeconds(episode.durationSec))
-                          : null,
-                      trailing: switch (accessFor(
-                        episode,
-                        user,
-                        effectiveVip: effectiveVip,
-                      )) {
-                        EpisodeAccessState.vipRequired => const Icon(
-                          Icons.lock,
-                          color: AppColors.vipGold,
-                        ),
-                        EpisodeAccessState.bonusRequired => Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(
-                              Icons.bolt,
-                              size: 18,
-                              color: AppColors.vipGold,
-                            ),
-                            Text(
-                              '${episode.bonusUnlockCost}',
-                              style: const TextStyle(color: AppColors.vipGold),
-                            ),
-                          ],
-                        ),
-                        EpisodeAccessState.open => const Icon(
-                          Icons.play_circle_outline,
-                        ),
-                        EpisodeAccessState.sourceLocked => Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            const Icon(Icons.lock_outline),
-                            const SizedBox(width: 4),
-                            Text(l10n.sourceLockedShort),
-                          ],
-                        ),
-                        EpisodeAccessState.sourceUnavailable => const Icon(
-                          Icons.warning_amber_rounded,
-                        ),
-                      },
-                      onTap: () {
-                        final access = accessFor(
-                          episode,
-                          user,
-                          effectiveVip: effectiveVip,
-                        );
-                        if (access == EpisodeAccessState.sourceLocked ||
-                            access == EpisodeAccessState.sourceUnavailable) {
-                          return;
-                        }
-                        if (access == EpisodeAccessState.vipRequired) {
-                          context.push('/subscribe');
-                          return;
-                        }
-                        context.push('/player/$seriesId/${episode.id}');
-                      },
-                    );
-                  },
-                ),
-              ],
-            ),
-          );
+          return _SeriesDetailContent(series: series, episodes: state.episodes);
         },
       ),
     );
   }
 }
 
-String _categoryLabel(AppLocalizations l10n, Category category) {
-  return switch (category) {
-    Category.forYou => l10n.forYou,
-    Category.newReleases => l10n.newUpdates,
-    Category.hot => l10n.hot,
-    Category.romance => l10n.romance,
-    Category.ceo => l10n.ceo,
-    Category.revenge => l10n.revenge,
-    Category.family => l10n.family,
-    Category.action => l10n.action,
-    Category.fantasy => l10n.fantasy,
-    Category.recommended => l10n.recommended,
-    Category.adventure => l10n.action,
-    Category.scary => l10n.fantasy,
-    Category.anime => l10n.recommended,
-    Category.vip => l10n.vip,
-  };
+class _SeriesDetailContent extends StatelessWidget {
+  const _SeriesDetailContent({required this.series, required this.episodes});
+
+  final Series series;
+  final List<Episode> episodes;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    return DefaultTabController(
+      length: 2,
+      child: CustomScrollView(
+        slivers: [
+          SliverToBoxAdapter(
+              child: _Header(series: series, episodes: episodes)),
+          SliverToBoxAdapter(
+            child: TabBar(
+              labelColor: AppColors.textPrimary,
+              unselectedLabelColor: AppColors.textMuted,
+              indicatorColor: AppColors.primary,
+              tabs: [Tab(text: l10n.intro), Tab(text: l10n.chooseEpisode)],
+            ),
+          ),
+          SliverFillRemaining(
+            hasScrollBody: true,
+            child: TabBarView(
+              children: [
+                _IntroTab(series: series),
+                SingleChildScrollView(
+                  padding: const EdgeInsets.only(top: 14),
+                  child: EpisodePickerGrid(
+                    episodes: episodes,
+                    currentIndex: -1,
+                    onSelect: (index) {
+                      final episode = episodes[index];
+                      if (episode.sourceLocked || !episode.sourceAvailable)
+                        return;
+                      context.push(
+                          '/watch/${series.id}?episodeId=${Uri.encodeComponent(episode.id)}');
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _Header extends StatelessWidget {
+  const _Header({required this.series, required this.episodes});
+
+  final Series series;
+  final List<Episode> episodes;
+
+  @override
+  Widget build(BuildContext context) {
+    final count = series.watchCount > 0 ? series.watchCount : series.popularity;
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 12),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(
+            width: 102,
+            height: 142,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: series.coverUrl.isEmpty
+                  ? const ColoredBox(
+                      color: AppColors.surfaceElevated,
+                      child: Icon(Icons.movie_outlined, size: 38))
+                  : CachedNetworkImage(
+                      imageUrl: series.coverUrl,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) => const ColoredBox(
+                          color: AppColors.surfaceElevated,
+                          child: Center(child: Icon(Icons.movie_outlined))),
+                      errorWidget: (_, __, ___) => const ColoredBox(
+                          color: AppColors.surfaceElevated,
+                          child: Icon(Icons.movie_outlined, size: 38)),
+                    ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(series.title,
+                    maxLines: 3,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context)
+                        .textTheme
+                        .titleLarge
+                        ?.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 10),
+                Text(AppLocalizations.of(context)!.views(compactCount(count)),
+                    style: const TextStyle(color: AppColors.textSecondary)),
+                const SizedBox(height: 4),
+                Text(
+                    AppLocalizations.of(context)!.episodeCount(episodes.length),
+                    style: const TextStyle(color: AppColors.textMuted)),
+                const SizedBox(height: 14),
+                SaveSeriesFilledButton(seriesId: series.id, series: series),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _IntroTab extends StatelessWidget {
+  const _IntroTab({required this.series});
+
+  final Series series;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final tags = [...series.genres, ...series.tags].toSet().toList();
+    return ListView(
+      padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
+      children: [
+        Text(
+            series.description.isEmpty
+                ? l10n.noDescription
+                : series.description,
+            style:
+                const TextStyle(color: AppColors.textSecondary, height: 1.45)),
+        if (tags.isNotEmpty) ...[
+          const SizedBox(height: 18),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              for (final tag in tags)
+                Chip(
+                    label: Text(tag),
+                    backgroundColor: AppColors.surfaceElevated,
+                    side: BorderSide.none,
+                    labelStyle:
+                        const TextStyle(color: AppColors.textSecondary)),
+            ],
+          ),
+        ],
+        const SizedBox(height: 24),
+        if (series.isDubbed || series.audioType != null)
+          Text(series.audioType ?? l10n.dubbed,
+              style: const TextStyle(
+                  color: AppColors.primaryLight, fontWeight: FontWeight.w700)),
+      ],
+    );
+  }
 }

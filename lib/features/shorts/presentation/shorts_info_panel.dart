@@ -14,11 +14,15 @@ class ShortsInfoPanel extends ConsumerWidget {
     super.key,
     required this.series,
     required this.episode,
+    this.onTitle,
+    this.onWatchAll,
     this.onCollapse,
   });
 
   final Series series;
   final Episode episode;
+  final VoidCallback? onTitle;
+  final VoidCallback? onWatchAll;
 
   /// Invoked when the user swipes the panel to the right to collapse it.
   final VoidCallback? onCollapse;
@@ -43,16 +47,29 @@ class ShortsInfoPanel extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.start,
             mainAxisSize: MainAxisSize.min,
             children: [
-              Text(
-                series.title,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 19,
-                  fontWeight: FontWeight.w800,
-                  height: 1.18,
-                  shadows: [Shadow(color: Colors.black87, blurRadius: 10)],
+              InkWell(
+                onTap: onTitle,
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        series.title,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 19,
+                          fontWeight: FontWeight.w800,
+                          height: 1.18,
+                          shadows: [
+                            Shadow(color: Colors.black87, blurRadius: 10)
+                          ],
+                        ),
+                      ),
+                    ),
+                    const Icon(Icons.chevron_right_rounded,
+                        color: Colors.white),
+                  ],
                 ),
               ),
               const SizedBox(height: 5),
@@ -72,6 +89,19 @@ class ShortsInfoPanel extends ConsumerWidget {
                   onReadMore: () => _showDescriptionSheet(context, series),
                 ),
               ],
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: FilledButton(
+                  onPressed: onWatchAll,
+                  style: FilledButton.styleFrom(
+                    backgroundColor: Colors.white.withValues(alpha: .18),
+                    foregroundColor: Colors.white,
+                  ),
+                  child: Text(AppLocalizations.of(context)!.watchAll),
+                ),
+              ),
             ],
           ),
         ),

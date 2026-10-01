@@ -1,24 +1,25 @@
 import 'package:flutter/material.dart';
 
-/// Brand palette. Purple-leaning, dark by default.
+/// Short-drama palette. Keep this centralized so player, shelves and cards
+/// share the same visual language.
 class AppColors {
   const AppColors._();
 
   // Backgrounds
-  static const Color bg = Color(0xFF0B0613);
-  static const Color surface = Color(0xFF15101F);
-  static const Color surfaceElevated = Color(0xFF1C1730);
-  static const Color divider = Color(0xFF2A2440);
+  static const Color bg = Color(0xFF050505);
+  static const Color surface = Color(0xFF121212);
+  static const Color surfaceElevated = Color(0xFF202020);
+  static const Color divider = Color(0xFF2E2E2E);
 
   // Brand
-  static const Color primary = Color(0xFF8B5CF6);
-  static const Color primaryLight = Color(0xFFA78BFA);
-  static const Color accent = Color(0xFFE879F9);
+  static const Color primary = Color(0xFFFF2D68);
+  static const Color primaryLight = Color(0xFFFF6C91);
+  static const Color accent = Color(0xFFFF9F43);
 
   // Text
   static const Color textPrimary = Color(0xFFF5F3FF);
-  static const Color textSecondary = Color(0xFFB4AED0);
-  static const Color textMuted = Color(0xFF7A7396);
+  static const Color textSecondary = Color(0xFFB9B9B9);
+  static const Color textMuted = Color(0xFF777777);
 
   // Status
   static const Color success = Color(0xFF22C55E);

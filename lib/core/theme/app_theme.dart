@@ -26,10 +26,14 @@ class AppTheme {
         centerTitle: false,
       ),
       bottomNavigationBarTheme: const BottomNavigationBarThemeData(
-        backgroundColor: AppColors.surface,
-        selectedItemColor: AppColors.primary,
-        unselectedItemColor: AppColors.textMuted,
+        backgroundColor: Colors.black,
+        selectedItemColor: AppColors.textPrimary,
+        unselectedItemColor: AppColors.textSecondary,
         type: BottomNavigationBarType.fixed,
+        elevation: 0,
+        showUnselectedLabels: true,
+        selectedLabelStyle: TextStyle(fontWeight: FontWeight.w700),
+        unselectedLabelStyle: TextStyle(fontWeight: FontWeight.w500),
       ),
       textTheme: base.textTheme
           .apply(
@@ -51,7 +55,7 @@ class AppTheme {
         color: AppColors.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
         ),
       ),
       filledButtonTheme: FilledButtonThemeData(

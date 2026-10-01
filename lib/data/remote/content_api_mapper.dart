@@ -31,6 +31,13 @@ class ContentApiMapper {
       saveCount: _int(json['saveCount']),
       followerCount: _int(json['followerCount']),
       isPublished: json['playable'] != false,
+      genres: _strings(json['genres']),
+      tags: _strings(json['tags']),
+      isNew: json['isNew'] == true,
+      isDubbed: json['isDubbed'] == true ||
+          _string(json['audioType']).toLowerCase() == 'dubbed',
+      audioType: _stringOrNull(json['audioType']),
+      provider: _stringOrNull(json['provider']),
     );
   }
 
@@ -80,6 +87,20 @@ class ContentApiMapper {
   }
 
   static String _string(Object? value) => value?.toString().trim() ?? '';
+
+  static String? _stringOrNull(Object? value) {
+    final valueString = _string(value);
+    return valueString.isEmpty ? null : valueString;
+  }
+
+  static List<String> _strings(Object? value) {
+    if (value is! List) return const [];
+    return value
+        .map((item) => _string(item))
+        .where((item) => item.isNotEmpty)
+        .toSet()
+        .toList(growable: false);
+  }
 
   static int _int(Object? value) {
     if (value is num) return value.toInt();

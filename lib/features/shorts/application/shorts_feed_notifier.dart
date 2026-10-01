@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/perf/trace.dart';
@@ -7,6 +9,9 @@ import '../../../domain/entities/episode.dart';
 import '../../../domain/entities/series.dart';
 
 const shortsFeedEpisodeLimit = 50;
+const shortsCandidateLimit = 30;
+const shortsUsableSeriesTarget = 20;
+const shortsChapterConcurrency = 5;
 
 class ShortsFeedState {
   const ShortsFeedState({
@@ -22,56 +27,70 @@ class ShortsFeedState {
   final Object? error;
 }
 
+/// Builds a diversified session: one first playable episode per series.
+/// Chapter requests are intentionally bounded so Shorts does not stampede the
+/// Content API when a new session starts.
 class ShortsFeedNotifier extends AsyncNotifier<ShortsFeedState> {
   @override
   Future<ShortsFeedState> build() async {
     return withTrace('shorts_load', () async {
       final seriesRepo = ref.read(seriesRepositoryProvider);
       final episodeRepo = ref.read(episodeRepositoryProvider);
-      final user = ref.read(currentAppUserDocProvider).value;
-
-      final List<Series> loadedSeries = await seriesRepo.byCategory(
-        Category.forYou,
-        limit: 10,
-      );
-      final followedIds = user?.followedSeriesIds ?? const <String>[];
-      final series = [...loadedSeries]..sort((a, b) {
-          final aFollowed = followedIds.contains(a.id);
-          final bFollowed = followedIds.contains(b.id);
-          if (aFollowed == bFollowed) return 0;
-          return aFollowed ? -1 : 1;
-        });
-      if (series.isEmpty) {
-        return const ShortsFeedState();
+      final groups = await Future.wait([
+        seriesRepo.byCategory(Category.forYou, limit: shortsCandidateLimit),
+        seriesRepo.byCategory(Category.hot, limit: shortsCandidateLimit),
+        seriesRepo.byCategory(Category.recommended,
+            limit: shortsCandidateLimit),
+      ]);
+      final candidates = <Series>[];
+      final seenIds = <String>{};
+      for (final group in groups) {
+        for (final series in group) {
+          if (seenIds.add(series.id)) candidates.add(series);
+          if (candidates.length >= shortsCandidateLimit) break;
+        }
+        if (candidates.length >= shortsCandidateLimit) break;
       }
+      if (candidates.isEmpty) return const ShortsFeedState();
 
-      final seriesById = {for (final item in series) item.id: item};
-
-      final lists = await Future.wait(
-        series.map((item) => episodeRepo.bySeriesId(item.id)),
-      );
-      final episodes = <Episode>[];
-      for (var seriesIndex = 0; seriesIndex < lists.length; seriesIndex++) {
-        episodes.addAll(
-          lists[seriesIndex].where(
-            (episode) => episode.sourceAvailable && !episode.sourceLocked,
-          ),
+      final usableEpisodes = <Episode>[];
+      final usableSeries = <String, Series>{};
+      for (var start = 0;
+          start < candidates.length;
+          start += shortsChapterConcurrency) {
+        final batch =
+            candidates.skip(start).take(shortsChapterConcurrency).toList();
+        final results = await Future.wait(
+          batch.map((series) async {
+            try {
+              final episodes = await episodeRepo.bySeriesId(series.id);
+              final playable = episodes
+                  .where((episode) =>
+                      episode.sourceAvailable &&
+                      !episode.sourceLocked &&
+                      !episode.isVipLocked)
+                  .toList()
+                ..sort((a, b) => a.order.compareTo(b.order));
+              return playable.isEmpty ? null : (series, playable.first);
+            } catch (_) {
+              return null;
+            }
+          }),
         );
+        for (final result in results) {
+          if (result == null) continue;
+          usableSeries[result.$1.id] = result.$1;
+          usableEpisodes.add(result.$2);
+        }
+        if (usableEpisodes.length >= shortsUsableSeriesTarget) break;
       }
-      final seriesRankById = {
-        for (var index = 0; index < series.length; index++)
-          series[index].id: index,
-      };
-      episodes.sort((a, b) {
-        final orderComparison = b.order.compareTo(a.order);
-        if (orderComparison != 0) return orderComparison;
-        return (seriesRankById[b.seriesId] ?? 0)
-            .compareTo(seriesRankById[a.seriesId] ?? 0);
-      });
 
+      final random = Random(DateTime.now().microsecondsSinceEpoch);
+      usableEpisodes.shuffle(random);
       return ShortsFeedState(
-        episodes: episodes.take(shortsFeedEpisodeLimit).toList(),
-        seriesById: seriesById,
+        episodes:
+            usableEpisodes.take(shortsFeedEpisodeLimit).toList(growable: false),
+        seriesById: usableSeries,
       );
     });
   }

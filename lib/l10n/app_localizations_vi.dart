@@ -565,4 +565,62 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get apiIncompatibleError =>
       'API nội dung không tương thích. Vui lòng cập nhật máy chủ.';
+
+  @override
+  String get watchAll => 'Xem toàn bộ';
+
+  @override
+  String get chooseEpisode => 'Chọn tập';
+
+  @override
+  String get intro => 'Giới thiệu';
+
+  @override
+  String get collapse => 'Thu gọn';
+
+  @override
+  String get ended => 'Đã hết phim';
+
+  @override
+  String episodeLabel(Object count) {
+    return 'Tập $count';
+  }
+
+  @override
+  String get share => 'Chia sẻ';
+
+  @override
+  String get like => 'Thích';
+
+  @override
+  String views(Object count) {
+    return '$count lượt xem';
+  }
+
+  @override
+  String get speed => 'Tốc độ';
+
+  @override
+  String get more => 'Thêm';
+
+  @override
+  String get hotTab => 'Hot';
+
+  @override
+  String get newTab => 'Phim mới';
+
+  @override
+  String get ranking => 'Xếp hạng';
+
+  @override
+  String get categories => 'Danh mục';
+
+  @override
+  String get similarContent => 'Thêm nội dung tương tự';
+
+  @override
+  String get noDescription => 'Chưa có mô tả.';
+
+  @override
+  String get lockedEpisode => 'Tập này đang bị khóa ở nguồn phát.';
 }

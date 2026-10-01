@@ -9,7 +9,7 @@ import 'package:shortigo/domain/interfaces/series_repository.dart';
 import 'package:shortigo/features/shorts/application/shorts_feed_notifier.dart';
 
 void main() {
-  test('shorts feed includes all open For You episodes newest first', () async {
+  test('shorts feed selects one first playable episode per series', () async {
     final container = ProviderContainer(
       overrides: [
         currentAppUserDocProvider.overrideWith((_) => Stream.value(null)),
@@ -43,16 +43,13 @@ void main() {
 
     final state = await container.read(shortsFeedNotifierProvider.future);
 
-    expect(state.episodes.map((episode) => episode.id), [
-      's1_e5',
-      's1_e4',
-      's2_e3',
-      's1_e3',
-      's2_e2',
-      's1_e2',
-      's2_e1',
-      's1_e1',
-    ]);
+    expect(state.episodes, hasLength(2));
+    expect(
+      state.episodes.map((episode) => episode.order),
+      containsAll(<int>[1, 1]),
+    );
+    expect(state.episodes.map((episode) => episode.seriesId).toSet(),
+        {'s1', 's2'});
     expect(state.episodes.map((episode) => episode.id),
         isNot(contains('s1_locked')));
     expect(state.episodes.map((episode) => episode.id),

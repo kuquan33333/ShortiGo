@@ -567,4 +567,62 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get apiIncompatibleError =>
       'This content API is incompatible. Please update the server.';
+
+  @override
+  String get watchAll => 'Watch all';
+
+  @override
+  String get chooseEpisode => 'Choose episode';
+
+  @override
+  String get intro => 'Introduction';
+
+  @override
+  String get collapse => 'Collapse';
+
+  @override
+  String get ended => 'End of series';
+
+  @override
+  String episodeLabel(Object count) {
+    return 'Episode $count';
+  }
+
+  @override
+  String get share => 'Share';
+
+  @override
+  String get like => 'Like';
+
+  @override
+  String views(Object count) {
+    return '$count views';
+  }
+
+  @override
+  String get speed => 'Speed';
+
+  @override
+  String get more => 'More';
+
+  @override
+  String get hotTab => 'Hot';
+
+  @override
+  String get newTab => 'New releases';
+
+  @override
+  String get ranking => 'Ranking';
+
+  @override
+  String get categories => 'Categories';
+
+  @override
+  String get similarContent => 'More like this';
+
+  @override
+  String get noDescription => 'No description available.';
+
+  @override
+  String get lockedEpisode => 'This episode is locked at the source.';
 }

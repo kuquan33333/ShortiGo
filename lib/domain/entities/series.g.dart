@@ -21,6 +21,17 @@ _Series _$SeriesFromJson(Map<String, dynamic> json) => _Series(
       saveCount: (json['saveCount'] as num?)?.toInt() ?? 0,
       followerCount: (json['followerCount'] as num?)?.toInt() ?? 0,
       isPublished: json['isPublished'] as bool? ?? true,
+      genres: (json['genres'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const <String>[],
+      tags:
+          (json['tags'] as List<dynamic>?)?.map((e) => e as String).toList() ??
+              const <String>[],
+      isNew: json['isNew'] as bool? ?? false,
+      isDubbed: json['isDubbed'] as bool? ?? false,
+      audioType: json['audioType'] as String?,
+      provider: json['provider'] as String?,
     );
 
 Map<String, dynamic> _$SeriesToJson(_Series instance) => <String, dynamic>{
@@ -38,12 +49,25 @@ Map<String, dynamic> _$SeriesToJson(_Series instance) => <String, dynamic>{
       'saveCount': instance.saveCount,
       'followerCount': instance.followerCount,
       'isPublished': instance.isPublished,
+      'genres': instance.genres,
+      'tags': instance.tags,
+      'isNew': instance.isNew,
+      'isDubbed': instance.isDubbed,
+      'audioType': instance.audioType,
+      'provider': instance.provider,
     };
 
 const _$CategoryEnumMap = {
   Category.forYou: 'forYou',
   Category.newReleases: 'newReleases',
   Category.hot: 'hot',
+  Category.romance: 'romance',
+  Category.ceo: 'ceo',
+  Category.revenge: 'revenge',
+  Category.family: 'family',
+  Category.action: 'action',
+  Category.fantasy: 'fantasy',
+  Category.recommended: 'recommended',
   Category.adventure: 'adventure',
   Category.scary: 'scary',
   Category.anime: 'anime',

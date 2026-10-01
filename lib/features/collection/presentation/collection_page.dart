@@ -193,7 +193,7 @@ class _CollectionPageState extends ConsumerState<CollectionPage> {
                     crossAxisCount: 3,
                     mainAxisSpacing: 12,
                     crossAxisSpacing: 12,
-                    childAspectRatio: 9 / 16,
+                    childAspectRatio: .49,
                   ),
                   itemCount: _items.length +
                       (_hasMore || _loadMoreError != null ? 1 : 0),
@@ -217,7 +217,7 @@ class _CollectionPageState extends ConsumerState<CollectionPage> {
                     final series = _items[index];
                     return SeriesCard(
                       series: series,
-                      onTap: () => context.push('/series/${series.id}'),
+                      onTap: () => context.push('/watch/${series.id}'),
                     );
                   },
                 ),

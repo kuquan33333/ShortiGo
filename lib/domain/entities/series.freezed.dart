@@ -28,6 +28,12 @@ mixin _$Series {
   int get saveCount;
   int get followerCount;
   bool get isPublished;
+  List<String> get genres;
+  List<String> get tags;
+  bool get isNew;
+  bool get isDubbed;
+  String? get audioType;
+  String? get provider;
 
   /// Create a copy of Series
   /// with the given fields replaced by the non-null parameter values.
@@ -68,31 +74,47 @@ mixin _$Series {
             (identical(other.followerCount, followerCount) ||
                 other.followerCount == followerCount) &&
             (identical(other.isPublished, isPublished) ||
-                other.isPublished == isPublished));
+                other.isPublished == isPublished) &&
+            const DeepCollectionEquality().equals(other.genres, genres) &&
+            const DeepCollectionEquality().equals(other.tags, tags) &&
+            (identical(other.isNew, isNew) || other.isNew == isNew) &&
+            (identical(other.isDubbed, isDubbed) ||
+                other.isDubbed == isDubbed) &&
+            (identical(other.audioType, audioType) ||
+                other.audioType == audioType) &&
+            (identical(other.provider, provider) ||
+                other.provider == provider));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      id,
-      title,
-      description,
-      coverUrl,
-      category,
-      isVip,
-      episodeCount,
-      totalDurationSec,
-      createdAt,
-      popularity,
-      watchCount,
-      saveCount,
-      followerCount,
-      isPublished);
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        id,
+        title,
+        description,
+        coverUrl,
+        category,
+        isVip,
+        episodeCount,
+        totalDurationSec,
+        createdAt,
+        popularity,
+        watchCount,
+        saveCount,
+        followerCount,
+        isPublished,
+        const DeepCollectionEquality().hash(genres),
+        const DeepCollectionEquality().hash(tags),
+        isNew,
+        isDubbed,
+        audioType,
+        provider
+      ]);
 
   @override
   String toString() {
-    return 'Series(id: $id, title: $title, description: $description, coverUrl: $coverUrl, category: $category, isVip: $isVip, episodeCount: $episodeCount, totalDurationSec: $totalDurationSec, createdAt: $createdAt, popularity: $popularity, watchCount: $watchCount, saveCount: $saveCount, followerCount: $followerCount, isPublished: $isPublished)';
+    return 'Series(id: $id, title: $title, description: $description, coverUrl: $coverUrl, category: $category, isVip: $isVip, episodeCount: $episodeCount, totalDurationSec: $totalDurationSec, createdAt: $createdAt, popularity: $popularity, watchCount: $watchCount, saveCount: $saveCount, followerCount: $followerCount, isPublished: $isPublished, genres: $genres, tags: $tags, isNew: $isNew, isDubbed: $isDubbed, audioType: $audioType, provider: $provider)';
   }
 }
 
@@ -115,7 +137,13 @@ abstract mixin class $SeriesCopyWith<$Res> {
       int watchCount,
       int saveCount,
       int followerCount,
-      bool isPublished});
+      bool isPublished,
+      List<String> genres,
+      List<String> tags,
+      bool isNew,
+      bool isDubbed,
+      String? audioType,
+      String? provider});
 }
 
 /// @nodoc
@@ -144,6 +172,12 @@ class _$SeriesCopyWithImpl<$Res> implements $SeriesCopyWith<$Res> {
     Object? saveCount = null,
     Object? followerCount = null,
     Object? isPublished = null,
+    Object? genres = null,
+    Object? tags = null,
+    Object? isNew = null,
+    Object? isDubbed = null,
+    Object? audioType = freezed,
+    Object? provider = freezed,
   }) {
     return _then(_self.copyWith(
       id: null == id
@@ -202,6 +236,30 @@ class _$SeriesCopyWithImpl<$Res> implements $SeriesCopyWith<$Res> {
           ? _self.isPublished
           : isPublished // ignore: cast_nullable_to_non_nullable
               as bool,
+      genres: null == genres
+          ? _self.genres
+          : genres // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      tags: null == tags
+          ? _self.tags
+          : tags // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      isNew: null == isNew
+          ? _self.isNew
+          : isNew // ignore: cast_nullable_to_non_nullable
+              as bool,
+      isDubbed: null == isDubbed
+          ? _self.isDubbed
+          : isDubbed // ignore: cast_nullable_to_non_nullable
+              as bool,
+      audioType: freezed == audioType
+          ? _self.audioType
+          : audioType // ignore: cast_nullable_to_non_nullable
+              as String?,
+      provider: freezed == provider
+          ? _self.provider
+          : provider // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }
@@ -313,7 +371,13 @@ extension SeriesPatterns on Series {
             int watchCount,
             int saveCount,
             int followerCount,
-            bool isPublished)?
+            bool isPublished,
+            List<String> genres,
+            List<String> tags,
+            bool isNew,
+            bool isDubbed,
+            String? audioType,
+            String? provider)?
         $default, {
     required TResult orElse(),
   }) {
@@ -334,7 +398,13 @@ extension SeriesPatterns on Series {
             _that.watchCount,
             _that.saveCount,
             _that.followerCount,
-            _that.isPublished);
+            _that.isPublished,
+            _that.genres,
+            _that.tags,
+            _that.isNew,
+            _that.isDubbed,
+            _that.audioType,
+            _that.provider);
       case _:
         return orElse();
     }
@@ -369,7 +439,13 @@ extension SeriesPatterns on Series {
             int watchCount,
             int saveCount,
             int followerCount,
-            bool isPublished)
+            bool isPublished,
+            List<String> genres,
+            List<String> tags,
+            bool isNew,
+            bool isDubbed,
+            String? audioType,
+            String? provider)
         $default,
   ) {
     final _that = this;
@@ -389,7 +465,13 @@ extension SeriesPatterns on Series {
             _that.watchCount,
             _that.saveCount,
             _that.followerCount,
-            _that.isPublished);
+            _that.isPublished,
+            _that.genres,
+            _that.tags,
+            _that.isNew,
+            _that.isDubbed,
+            _that.audioType,
+            _that.provider);
       case _:
         throw StateError('Unexpected subclass');
     }
@@ -423,7 +505,13 @@ extension SeriesPatterns on Series {
             int watchCount,
             int saveCount,
             int followerCount,
-            bool isPublished)?
+            bool isPublished,
+            List<String> genres,
+            List<String> tags,
+            bool isNew,
+            bool isDubbed,
+            String? audioType,
+            String? provider)?
         $default,
   ) {
     final _that = this;
@@ -443,7 +531,13 @@ extension SeriesPatterns on Series {
             _that.watchCount,
             _that.saveCount,
             _that.followerCount,
-            _that.isPublished);
+            _that.isPublished,
+            _that.genres,
+            _that.tags,
+            _that.isNew,
+            _that.isDubbed,
+            _that.audioType,
+            _that.provider);
       case _:
         return null;
     }
@@ -467,7 +561,15 @@ class _Series implements Series {
       this.watchCount = 0,
       this.saveCount = 0,
       this.followerCount = 0,
-      this.isPublished = true});
+      this.isPublished = true,
+      final List<String> genres = const <String>[],
+      final List<String> tags = const <String>[],
+      this.isNew = false,
+      this.isDubbed = false,
+      this.audioType,
+      this.provider})
+      : _genres = genres,
+        _tags = tags;
   factory _Series.fromJson(Map<String, dynamic> json) => _$SeriesFromJson(json);
 
   @override
@@ -507,6 +609,34 @@ class _Series implements Series {
   @override
   @JsonKey()
   final bool isPublished;
+  final List<String> _genres;
+  @override
+  @JsonKey()
+  List<String> get genres {
+    if (_genres is EqualUnmodifiableListView) return _genres;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_genres);
+  }
+
+  final List<String> _tags;
+  @override
+  @JsonKey()
+  List<String> get tags {
+    if (_tags is EqualUnmodifiableListView) return _tags;
+    // ignore: implicit_dynamic_type
+    return EqualUnmodifiableListView(_tags);
+  }
+
+  @override
+  @JsonKey()
+  final bool isNew;
+  @override
+  @JsonKey()
+  final bool isDubbed;
+  @override
+  final String? audioType;
+  @override
+  final String? provider;
 
   /// Create a copy of Series
   /// with the given fields replaced by the non-null parameter values.
@@ -552,31 +682,47 @@ class _Series implements Series {
             (identical(other.followerCount, followerCount) ||
                 other.followerCount == followerCount) &&
             (identical(other.isPublished, isPublished) ||
-                other.isPublished == isPublished));
+                other.isPublished == isPublished) &&
+            const DeepCollectionEquality().equals(other._genres, _genres) &&
+            const DeepCollectionEquality().equals(other._tags, _tags) &&
+            (identical(other.isNew, isNew) || other.isNew == isNew) &&
+            (identical(other.isDubbed, isDubbed) ||
+                other.isDubbed == isDubbed) &&
+            (identical(other.audioType, audioType) ||
+                other.audioType == audioType) &&
+            (identical(other.provider, provider) ||
+                other.provider == provider));
   }
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
-      runtimeType,
-      id,
-      title,
-      description,
-      coverUrl,
-      category,
-      isVip,
-      episodeCount,
-      totalDurationSec,
-      createdAt,
-      popularity,
-      watchCount,
-      saveCount,
-      followerCount,
-      isPublished);
+  int get hashCode => Object.hashAll([
+        runtimeType,
+        id,
+        title,
+        description,
+        coverUrl,
+        category,
+        isVip,
+        episodeCount,
+        totalDurationSec,
+        createdAt,
+        popularity,
+        watchCount,
+        saveCount,
+        followerCount,
+        isPublished,
+        const DeepCollectionEquality().hash(_genres),
+        const DeepCollectionEquality().hash(_tags),
+        isNew,
+        isDubbed,
+        audioType,
+        provider
+      ]);
 
   @override
   String toString() {
-    return 'Series(id: $id, title: $title, description: $description, coverUrl: $coverUrl, category: $category, isVip: $isVip, episodeCount: $episodeCount, totalDurationSec: $totalDurationSec, createdAt: $createdAt, popularity: $popularity, watchCount: $watchCount, saveCount: $saveCount, followerCount: $followerCount, isPublished: $isPublished)';
+    return 'Series(id: $id, title: $title, description: $description, coverUrl: $coverUrl, category: $category, isVip: $isVip, episodeCount: $episodeCount, totalDurationSec: $totalDurationSec, createdAt: $createdAt, popularity: $popularity, watchCount: $watchCount, saveCount: $saveCount, followerCount: $followerCount, isPublished: $isPublished, genres: $genres, tags: $tags, isNew: $isNew, isDubbed: $isDubbed, audioType: $audioType, provider: $provider)';
   }
 }
 
@@ -600,7 +746,13 @@ abstract mixin class _$SeriesCopyWith<$Res> implements $SeriesCopyWith<$Res> {
       int watchCount,
       int saveCount,
       int followerCount,
-      bool isPublished});
+      bool isPublished,
+      List<String> genres,
+      List<String> tags,
+      bool isNew,
+      bool isDubbed,
+      String? audioType,
+      String? provider});
 }
 
 /// @nodoc
@@ -629,6 +781,12 @@ class __$SeriesCopyWithImpl<$Res> implements _$SeriesCopyWith<$Res> {
     Object? saveCount = null,
     Object? followerCount = null,
     Object? isPublished = null,
+    Object? genres = null,
+    Object? tags = null,
+    Object? isNew = null,
+    Object? isDubbed = null,
+    Object? audioType = freezed,
+    Object? provider = freezed,
   }) {
     return _then(_Series(
       id: null == id
@@ -687,6 +845,30 @@ class __$SeriesCopyWithImpl<$Res> implements _$SeriesCopyWith<$Res> {
           ? _self.isPublished
           : isPublished // ignore: cast_nullable_to_non_nullable
               as bool,
+      genres: null == genres
+          ? _self._genres
+          : genres // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      tags: null == tags
+          ? _self._tags
+          : tags // ignore: cast_nullable_to_non_nullable
+              as List<String>,
+      isNew: null == isNew
+          ? _self.isNew
+          : isNew // ignore: cast_nullable_to_non_nullable
+              as bool,
+      isDubbed: null == isDubbed
+          ? _self.isDubbed
+          : isDubbed // ignore: cast_nullable_to_non_nullable
+              as bool,
+      audioType: freezed == audioType
+          ? _self.audioType
+          : audioType // ignore: cast_nullable_to_non_nullable
+              as String?,
+      provider: freezed == provider
+          ? _self.provider
+          : provider // ignore: cast_nullable_to_non_nullable
+              as String?,
     ));
   }
 }

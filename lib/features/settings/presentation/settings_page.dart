@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/error/friendly_error.dart';
 import '../../../core/providers.dart';
+import '../../../core/theme/app_colors.dart';
 import '../../../data/remote/content_api_models.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../discover/application/discover_notifier.dart';
@@ -127,61 +128,86 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settings)),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 32),
         children: [
-          Text(l10n.contentSource,
-              style: Theme.of(context).textTheme.titleLarge),
-          const SizedBox(height: 8),
-          Text(l10n.contentApiServer),
-          const SizedBox(height: 8),
-          TextField(
-            controller: _urlController,
-            keyboardType: TextInputType.url,
-            autocorrect: false,
-            decoration: const InputDecoration(
-              hintText: 'https://api.example.com',
-              border: OutlineInputBorder(),
+          Card(
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      const Icon(Icons.dns_rounded,
+                          color: AppColors.primaryLight),
+                      const SizedBox(width: 10),
+                      Text(l10n.contentSource,
+                          style: Theme.of(context).textTheme.titleLarge),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Text(l10n.contentApiServer,
+                      style: const TextStyle(color: AppColors.textSecondary)),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _urlController,
+                    keyboardType: TextInputType.url,
+                    autocorrect: false,
+                    decoration: InputDecoration(
+                      hintText: 'https://api.example.com',
+                      filled: true,
+                      fillColor: AppColors.surfaceElevated,
+                      prefixIcon: const Icon(Icons.link_rounded),
+                      border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                          borderSide: BorderSide.none),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: OutlinedButton.icon(
+                          onPressed: _checking ? null : _checkConnection,
+                          icon: const Icon(Icons.wifi_find_rounded),
+                          label: _checking
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2))
+                              : Text(l10n.testConnection),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: FilledButton.icon(
+                          onPressed: _saving ? null : _save,
+                          icon: const Icon(Icons.check_rounded),
+                          label: _saving
+                              ? const SizedBox.square(
+                                  dimension: 18,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2))
+                              : Text(l10n.save),
+                        ),
+                      ),
+                    ],
+                  ),
+                  TextButton.icon(
+                    onPressed: _restoreDefault,
+                    icon: const Icon(Icons.restore_rounded),
+                    label: Text(l10n.restoreDefault),
+                  ),
+                ],
+              ),
             ),
-          ),
-          const SizedBox(height: 12),
-          Row(
-            children: [
-              Expanded(
-                child: OutlinedButton(
-                  onPressed: _checking ? null : _checkConnection,
-                  child: _checking
-                      ? const SizedBox.square(
-                          dimension: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(l10n.testConnection),
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: FilledButton(
-                  onPressed: _saving ? null : _save,
-                  child: _saving
-                      ? const SizedBox.square(
-                          dimension: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : Text(l10n.save),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          TextButton(
-            onPressed: _restoreDefault,
-            child: Text(l10n.restoreDefault),
           ),
           if (_error != null) ...[
             const SizedBox(height: 12),
             Text(_error!,
                 style: TextStyle(color: Theme.of(context).colorScheme.error)),
           ],
-          const SizedBox(height: 24),
+          const SizedBox(height: 18),
           _StatusCard(status: _status),
         ],
       ),
