@@ -20,26 +20,18 @@ class FirestoreSocialActionsGateway implements SocialActionsGateway {
     final userId = _requireUserId();
     final userRef = _db.collection('users').doc(userId);
     final episodeRef = _db.collection('episodes').doc(episodeId);
-
-    return _db.runTransaction((transaction) async {
-      final user = await transaction.get(userRef);
-      final episode = await transaction.get(episodeRef);
-      final likedIds = _stringList(user.data()?['likedEpisodeIds']);
-      final alreadyLiked = likedIds.contains(episodeId);
-
-      if (liked == alreadyLiked) {
-        return;
-      }
-
-      transaction.update(userRef, {
-        'likedEpisodeIds': liked
-            ? FieldValue.arrayUnion([episodeId])
-            : FieldValue.arrayRemove([episodeId]),
-      });
-      if (episode.exists) {
-        transaction.update(episodeRef, {
-          'likeCount': _nextCount(episode.data()?['likeCount'], liked ? 1 : -1),
-        });
+    return _updateUserPreference(
+      userRef: userRef,
+      field: 'likedEpisodeIds',
+      value: episodeId,
+      enabled: liked,
+    ).then((changed) async {
+      if (changed) {
+        await _updateLegacyCounter(
+          ref: episodeRef,
+          field: 'likeCount',
+          delta: liked ? 1 : -1,
+        );
       }
     });
   }
@@ -53,28 +45,18 @@ class FirestoreSocialActionsGateway implements SocialActionsGateway {
     final userRef = _db.collection('users').doc(userId);
     final seriesRef = _db.collection('series').doc(seriesId);
 
-    return _db.runTransaction((transaction) async {
-      final user = await transaction.get(userRef);
-      final series = await transaction.get(seriesRef);
-      final savedIds = _stringList(user.data()?['favoriteSeriesIds']);
-      final alreadySaved = savedIds.contains(seriesId);
-
-      if (saved == alreadySaved) {
-        return;
-      }
-
-      transaction.update(userRef, {
-        'favoriteSeriesIds': saved
-            ? FieldValue.arrayUnion([seriesId])
-            : FieldValue.arrayRemove([seriesId]),
-      });
-      // Catalog metadata now comes from the Content API. The account
-      // preference remains in Firestore, while the old catalog counter is
-      // updated only when a legacy Firestore series document still exists.
-      if (series.exists) {
-        transaction.update(seriesRef, {
-          'saveCount': _nextCount(series.data()?['saveCount'], saved ? 1 : -1),
-        });
+    return _updateUserPreference(
+      userRef: userRef,
+      field: 'favoriteSeriesIds',
+      value: seriesId,
+      enabled: saved,
+    ).then((changed) async {
+      if (changed) {
+        await _updateLegacyCounter(
+          ref: seriesRef,
+          field: 'saveCount',
+          delta: saved ? 1 : -1,
+        );
       }
     });
   }
@@ -101,28 +83,58 @@ class FirestoreSocialActionsGateway implements SocialActionsGateway {
     final userRef = _db.collection('users').doc(userId);
     final seriesRef = _db.collection('series').doc(seriesId);
 
-    return _db.runTransaction((transaction) async {
-      final user = await transaction.get(userRef);
-      final series = await transaction.get(seriesRef);
-      final followedIds = _stringList(user.data()?['followedSeriesIds']);
-      final alreadyFollowed = followedIds.contains(seriesId);
-
-      if (followed == alreadyFollowed) {
-        return;
-      }
-
-      transaction.update(userRef, {
-        'followedSeriesIds': followed
-            ? FieldValue.arrayUnion([seriesId])
-            : FieldValue.arrayRemove([seriesId]),
-      });
-      if (series.exists) {
-        transaction.update(seriesRef, {
-          'followerCount':
-              _nextCount(series.data()?['followerCount'], followed ? 1 : -1),
-        });
+    return _updateUserPreference(
+      userRef: userRef,
+      field: 'followedSeriesIds',
+      value: seriesId,
+      enabled: followed,
+    ).then((changed) async {
+      if (changed) {
+        await _updateLegacyCounter(
+          ref: seriesRef,
+          field: 'followerCount',
+          delta: followed ? 1 : -1,
+        );
       }
     });
+  }
+
+  Future<bool> _updateUserPreference({
+    required DocumentReference<Map<String, dynamic>> userRef,
+    required String field,
+    required String value,
+    required bool enabled,
+  }) async {
+    return _db.runTransaction((transaction) async {
+      final snapshot = await transaction.get(userRef);
+      final values = (snapshot.data()?[field] as List<Object?>?) ?? const [];
+      final present = values.contains(value);
+      if (present == enabled) return false;
+      transaction.update(userRef, {
+        field: enabled
+            ? FieldValue.arrayUnion([value])
+            : FieldValue.arrayRemove([value]),
+      });
+      return true;
+    });
+  }
+
+  Future<void> _updateLegacyCounter({
+    required DocumentReference<Map<String, dynamic>> ref,
+    required String field,
+    required int delta,
+  }) async {
+    try {
+      final snapshot = await ref.get();
+      if (!snapshot.exists) return;
+      await ref.update({
+        field: _nextCount(snapshot.data()?[field], delta),
+      });
+    } on Object {
+      // Content API catalog items do not have to exist in Firestore. The
+      // account preference above is authoritative; legacy counters are best
+      // effort only.
+    }
   }
 
   String _requireUserId() {
@@ -132,13 +144,6 @@ class FirestoreSocialActionsGateway implements SocialActionsGateway {
     }
     return userId;
   }
-}
-
-List<String> _stringList(Object? value) {
-  if (value is Iterable) {
-    return value.whereType<String>().toList();
-  }
-  return const [];
 }
 
 int _nextCount(Object? current, int delta) {

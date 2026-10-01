@@ -2,6 +2,9 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 import '../../domain/entities/transaction.dart' as domain;
 import '../../domain/entities/user.dart';
+import '../../domain/entities/category.dart';
+import '../../domain/entities/series.dart';
+import '../../domain/entities/watch_history_entry.dart';
 import '../../domain/interfaces/user_repository.dart';
 import 'firestore_json.dart';
 
@@ -34,7 +37,12 @@ class FirestoreUserRepository implements UserRepository {
   @override
   Future<void> createIfMissing(AppUser user) async {
     final ref = _db.collection('users').doc(user.id);
-    await ref.set(user.toJson(), SetOptions(merge: true));
+    await _db.runTransaction((transaction) async {
+      final snapshot = await transaction.get(ref);
+      if (!snapshot.exists) {
+        transaction.set(ref, user.toJson());
+      }
+    });
   }
 
   @override
@@ -69,7 +77,64 @@ class FirestoreUserRepository implements UserRepository {
     final user = _db.collection('users').doc(userId);
     await _deleteCollection(user.collection('favorites'));
     await _deleteCollection(user.collection('events'));
+    await _deleteCollection(user.collection('watchHistory'));
     await user.delete();
+  }
+
+  @override
+  Future<List<WatchHistoryEntry>> readWatchHistory(String userId) async {
+    final snapshot = await _db
+        .collection('users')
+        .doc(userId)
+        .collection('watchHistory')
+        .orderBy('watchedAt', descending: true)
+        .get();
+    return snapshot.docs.map((doc) {
+      final data = doc.data();
+      final watchedAt = data['watchedAt'];
+      final cover = data['coverUrl']?.toString() ?? '';
+      final title = data['title']?.toString() ?? doc.id;
+      final seriesId = data['seriesId']?.toString() ?? doc.id;
+      return WatchHistoryEntry(
+        seriesId: seriesId,
+        series: Series(
+          id: seriesId,
+          title: title,
+          coverUrl: cover,
+          category: Category.forYou,
+          createdAt: DateTime.fromMillisecondsSinceEpoch(0, isUtc: true),
+        ),
+        episodeId: data['episodeId']?.toString() ?? '',
+        episodeOrder: _int(data['episodeOrder']),
+        chapterIndex: _int(data['chapterIndex']),
+        positionMs: _int(data['positionMs']),
+        durationMs: _int(data['durationMs']),
+        watchedAt: _timestamp(watchedAt),
+      );
+    }).toList(growable: false);
+  }
+
+  @override
+  Future<void> saveWatchHistory(
+    String userId,
+    WatchHistoryEntry entry,
+  ) {
+    return _db
+        .collection('users')
+        .doc(userId)
+        .collection('watchHistory')
+        .doc(entry.seriesId)
+        .set({
+      'seriesId': entry.seriesId,
+      'episodeId': entry.episodeId,
+      'episodeOrder': entry.episodeOrder,
+      'chapterIndex': entry.chapterIndex,
+      'positionMs': entry.positionMs,
+      'durationMs': entry.durationMs,
+      'watchedAt': Timestamp.fromDate(entry.watchedAt.toUtc()),
+      'title': entry.series.title,
+      'coverUrl': entry.series.coverUrl,
+    }, SetOptions(merge: true));
   }
 
   Future<void> _deleteCollection(
@@ -130,4 +195,15 @@ class FirestoreUserRepository implements UserRepository {
   String _transactionDocId(String reference) {
     return reference.replaceAll('/', '_');
   }
+}
+
+int _int(Object? value) {
+  if (value is num) return value.toInt();
+  return int.tryParse(value?.toString() ?? '') ?? 0;
+}
+
+DateTime _timestamp(Object? value) {
+  if (value is Timestamp) return value.toDate().toUtc();
+  return DateTime.tryParse(value?.toString() ?? '')?.toUtc() ??
+      DateTime.fromMillisecondsSinceEpoch(0, isUtc: true);
 }

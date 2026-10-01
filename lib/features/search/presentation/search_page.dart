@@ -264,6 +264,11 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     _onChanged(suggestion);
   }
 
+  void _clearSearch() {
+    _controller.clear();
+    _onChanged('');
+  }
+
   @override
   Widget build(BuildContext context) {
     final revision = ref.watch(contentApiRevisionProvider);
@@ -276,21 +281,28 @@ class _SearchPageState extends ConsumerState<SearchPage> {
       });
     }
     final l10n = AppLocalizations.of(context)!;
+    final isSearching = _controller.text.trim().isNotEmpty;
     return Scaffold(
-      appBar: AppBar(
-        title: TextField(
-          controller: _controller,
-          autofocus: true,
-          onChanged: _onChanged,
-          decoration: InputDecoration(
-            hintText: l10n.searchHint,
-            border: InputBorder.none,
-          ),
+      backgroundColor: AppColors.bg,
+      body: SafeArea(
+        bottom: false,
+        child: Column(
+          children: [
+            _SearchHeader(
+              controller: _controller,
+              hintText: l10n.searchHint,
+              onChanged: _onChanged,
+              onBack: context.pop,
+              onClear: isSearching ? _clearSearch : null,
+            ),
+            Expanded(
+              child: isSearching
+                  ? _searchResults(context, l10n)
+                  : _landing(context, l10n),
+            ),
+          ],
         ),
       ),
-      body: _controller.text.trim().isEmpty
-          ? _landing(context, l10n)
-          : _searchResults(context, l10n),
     );
   }
 
@@ -479,6 +491,78 @@ class _SearchPageState extends ConsumerState<SearchPage> {
             ),
           ),
       ],
+    );
+  }
+}
+
+class _SearchHeader extends StatelessWidget {
+  const _SearchHeader({
+    required this.controller,
+    required this.hintText,
+    required this.onChanged,
+    required this.onBack,
+    required this.onClear,
+  });
+
+  final TextEditingController controller;
+  final String hintText;
+  final ValueChanged<String> onChanged;
+  final VoidCallback onBack;
+  final VoidCallback? onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    return ColoredBox(
+      color: AppColors.bg,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(8, 8, 16, 8),
+        child: Row(
+          children: [
+            AppPressable(
+              onTap: onBack,
+              semanticsLabel:
+                  MaterialLocalizations.of(context).backButtonTooltip,
+              child: const SizedBox(
+                width: 44,
+                height: 44,
+                child: Icon(Icons.arrow_back_ios_new_rounded),
+              ),
+            ),
+            Expanded(
+              child: Container(
+                height: 46,
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceElevated,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.divider),
+                ),
+                child: TextField(
+                  controller: controller,
+                  autofocus: true,
+                  onChanged: onChanged,
+                  textInputAction: TextInputAction.search,
+                  style: const TextStyle(color: AppColors.textPrimary),
+                  decoration: InputDecoration(
+                    hintText: hintText,
+                    hintStyle: const TextStyle(color: AppColors.textSecondary),
+                    prefixIcon: const Icon(Icons.search_rounded),
+                    suffixIcon: onClear == null
+                        ? null
+                        : AppPressable(
+                            onTap: onClear,
+                            semanticsLabel: MaterialLocalizations.of(context)
+                                .deleteButtonTooltip,
+                            child: const Icon(Icons.close_rounded),
+                          ),
+                    border: InputBorder.none,
+                    contentPadding: const EdgeInsets.symmetric(vertical: 12),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

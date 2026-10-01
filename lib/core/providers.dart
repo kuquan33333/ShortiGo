@@ -14,6 +14,7 @@ import '../data/social/firestore_social_actions_gateway.dart';
 import '../data/rewards/firestore_reward_gateway.dart';
 import '../data/local/shortigo_database.dart';
 import '../data/local/guest_favorites_repository.dart';
+import '../data/local/local_library_repository.dart';
 import '../data/remote/content_api_client.dart';
 import '../data/remote/remote_episode_repository.dart';
 import '../data/remote/remote_series_repository.dart';
@@ -79,6 +80,10 @@ final guestFavoritesRepositoryProvider = Provider<GuestFavoritesRepository>((
   return GuestFavoritesRepository(ref.watch(shortigoDatabaseProvider));
 });
 
+final localLibraryRepositoryProvider = Provider<LocalLibraryRepository>((ref) {
+  return LocalLibraryRepository(ref.watch(shortigoDatabaseProvider));
+});
+
 final guestFavoriteSavedProvider = FutureProvider.family<bool, String>((
   ref,
   id,
@@ -114,9 +119,10 @@ final userRepositoryProvider = Provider<UserRepository>((ref) {
 });
 
 final socialActionsGatewayProvider = Provider<SocialActionsGateway>((ref) {
+  final authUser = ref.watch(currentAuthUserProvider).value;
   return FirestoreSocialActionsGateway(
     db: ref.watch(firestoreProvider),
-    userId: ref.watch(firebaseAuthProvider).currentUser?.uid,
+    userId: authUser?.uid,
   );
 });
 

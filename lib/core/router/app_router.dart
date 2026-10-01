@@ -103,6 +103,8 @@ GoRouter buildRouter({
         builder: (_, state) => MainPlayerPage(
           seriesId: state.pathParameters['seriesId']!,
           episodeId: state.uri.queryParameters['episodeId'],
+          resumePositionMs:
+              int.tryParse(state.uri.queryParameters['resumeMs'] ?? ''),
         ),
       ),
       GoRoute(

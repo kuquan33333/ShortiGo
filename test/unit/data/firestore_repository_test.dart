@@ -6,6 +6,7 @@ import 'package:shortigo/data/firestore/transaction_repository.dart';
 import 'package:shortigo/data/firestore/user_repository.dart';
 import 'package:shortigo/domain/entities/category.dart';
 import 'package:shortigo/domain/entities/transaction.dart' as domain;
+import 'package:shortigo/domain/entities/user.dart';
 
 void main() {
   group('Firestore repositories', () {
@@ -72,6 +73,36 @@ void main() {
 
       final unsaved = await repo.byId('u1');
       expect(unsaved.favoriteSeriesIds, ['existing']);
+    });
+
+    test('createIfMissing creates defaults and does not overwrite an account',
+        () async {
+      final db = FakeFirebaseFirestore();
+      final repo = FirestoreUserRepository(db);
+      final user = AppUser(
+        id: 'u1',
+        email: 'u@example.com',
+        displayName: 'User',
+        createdAt: DateTime.utc(2026, 6, 2),
+      );
+
+      await repo.createIfMissing(user);
+      final created = await repo.byId('u1');
+      expect(created.coins, 0);
+      expect(created.bonus, 0);
+      expect(created.favoriteSeriesIds, isEmpty);
+      expect(created.unlockedEpisodeIds, isEmpty);
+
+      await db.collection('users').doc('u1').update({
+        'bonus': 10,
+        'isVip': true,
+        'favoriteSeriesIds': ['saved'],
+      });
+      await repo.createIfMissing(user);
+      final unchanged = await repo.byId('u1');
+      expect(unchanged.bonus, 10);
+      expect(unchanged.isVip, isTrue);
+      expect(unchanged.favoriteSeriesIds, ['saved']);
     });
 
     test('daily check-in grant is idempotent for the same reference', () async {

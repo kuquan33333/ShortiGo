@@ -288,6 +288,22 @@ service cloud.firestore {
       allow read, write: if request.auth != null && request.auth.uid == uid;
     }
 
+    match /users/{uid}/watchHistory/{seriesId} {
+      allow read: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null
+        && request.auth.uid == uid
+        && request.resource.data.seriesId == seriesId
+        && request.resource.data.episodeId is string
+        && request.resource.data.episodeOrder is int
+        && request.resource.data.chapterIndex is int
+        && request.resource.data.positionMs is int
+        && request.resource.data.durationMs is int
+        && request.resource.data.positionMs >= 0
+        && request.resource.data.durationMs >= 0
+        && request.resource.data.watchedAt is timestamp;
+      allow delete: if request.auth != null && request.auth.uid == uid;
+    }
+
     match /admin/{doc} {
       allow read: if true;
       allow write: if isSuperAdmin();

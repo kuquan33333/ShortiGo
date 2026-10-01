@@ -4,6 +4,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../../core/providers.dart';
 import '../../../bootstrap/firebase_bootstrap.dart';
+import '../../../domain/entities/user.dart';
 import 'auth_error.dart';
 
 class AuthState {
@@ -32,6 +33,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       final cred = await ref
           .read(firebaseAuthProvider)
           .signInWithEmailAndPassword(email: email, password: password);
+      await _ensureUserDocument(cred.user);
       state = AsyncData(AuthState(user: cred.user));
     } catch (error) {
       state = AsyncData(AuthState(error: authErrorCode(error)));
@@ -46,6 +48,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
           .read(firebaseAuthProvider)
           .createUserWithEmailAndPassword(email: email, password: password);
       await cred.user?.sendEmailVerification();
+      await _ensureUserDocument(cred.user);
       state = AsyncData(AuthState(user: cred.user));
     } catch (error) {
       state = AsyncData(AuthState(error: authErrorCode(error)));
@@ -71,6 +74,7 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       );
       final cred =
           await ref.read(firebaseAuthProvider).signInWithCredential(credential);
+      await _ensureUserDocument(cred.user);
       state = AsyncData(AuthState(user: cred.user));
     } catch (error) {
       state = AsyncData(AuthState(error: authErrorCode(error)));
@@ -89,6 +93,19 @@ class AuthNotifier extends AsyncNotifier<AuthState> {
       AuthState(error: 'account-service-unavailable'),
     );
     return false;
+  }
+
+  Future<void> _ensureUserDocument(fb.User? user) async {
+    if (user == null) return;
+    await ref.read(userRepositoryProvider).createIfMissing(
+          AppUser(
+            id: user.uid,
+            email: user.email ?? '',
+            displayName: user.displayName,
+            photoUrl: user.photoURL,
+            createdAt: DateTime.now().toUtc(),
+          ),
+        );
   }
 }
 

@@ -10,9 +10,12 @@ import 'package:go_router/go_router.dart';
 import '../../../core/error/friendly_error.dart';
 import '../../../core/async/retryable_future_cache.dart';
 import '../../../core/providers.dart';
+import '../../../data/local/local_library_repository.dart';
 import '../../../data/remote/content_api_models.dart';
 import '../../../domain/entities/episode.dart';
+import '../../../domain/entities/playable_media.dart';
 import '../../../domain/entities/series.dart';
+import '../../../domain/entities/watch_history_entry.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/content_source_setup_view.dart';
@@ -39,7 +42,7 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
     with WidgetsBindingObserver {
   final _pageController = PageController();
   final _preCache = VideoPreCacheManager();
-  final _urlCache = RetryableFutureCache<String, String>();
+  final _mediaCache = RetryableFutureCache<String, PlayableMedia>();
 
   late final BetterPlayerController _playerController;
 
@@ -51,7 +54,11 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
   bool _playerMounted = false;
   String? _attachedEpisodeId;
   double _playbackProgress = 0;
+  int _playbackDurationMs = 0;
   bool _isPausedByUser = false;
+  final _historyRecordedEpisodeIds = <String>{};
+  PlaybackCandidateSequence? _candidateSequence;
+  bool _handlingPlaybackFailure = false;
 
   @override
   void initState() {
@@ -66,6 +73,7 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _playerMounted = false;
+    _mediaCache.clear();
     _playerController.dispose(forceDispose: true);
     _pageController.dispose();
     super.dispose();
@@ -86,7 +94,15 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
 
     switch (event.betterPlayerEventType) {
       case BetterPlayerEventType.exception:
-        setState(() => _hasError = true);
+        if (!_isLoading && !_handlingPlaybackFailure) {
+          final exception = event.parameters?['exception'];
+          unawaited(
+            _handlePlaybackFailure(
+              _playGeneration,
+              exception is Object ? exception : 'player-exception',
+            ),
+          );
+        }
       case BetterPlayerEventType.progress:
       case BetterPlayerEventType.finished:
         if (event.betterPlayerEventType == BetterPlayerEventType.finished &&
@@ -103,6 +119,10 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
         if (next != null && (next - _playbackProgress).abs() > 0.001) {
           setState(() => _playbackProgress = next);
         }
+        if (_playbackDurationMs > 0 &&
+            _playbackProgress * _playbackDurationMs >= 5000) {
+          unawaited(_recordShortsHistory());
+        }
       default:
         break;
     }
@@ -118,6 +138,8 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
     if (position == null || duration == null || duration.inMilliseconds <= 0) {
       return null;
     }
+
+    _playbackDurationMs = duration.inMilliseconds;
 
     return position.inMilliseconds / duration.inMilliseconds;
   }
@@ -327,6 +349,7 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
       _isLoading = true;
       _hasError = false;
       _playbackProgress = 0;
+      _playbackDurationMs = 0;
       _isPausedByUser = false;
     });
     _prefetchUrls(episodes);
@@ -375,6 +398,7 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
         _isLoading = false;
         _hasError = false;
         _playbackProgress = 0;
+        _playbackDurationMs = 0;
         _isPausedByUser = false;
       });
       return;
@@ -407,49 +431,160 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
         return;
       }
 
-      final url = await _urlFor(episode);
+      final media = await _mediaFor(episode);
       if (!mounted || generation != _playGeneration) {
         return;
       }
+      _candidateSequence = PlaybackCandidateSequence(media);
 
-      await _playerController.setupDataSource(
-        buildNetworkVideoDataSource(url),
-      );
-      if (!mounted || generation != _playGeneration) {
-        return;
+      await _setupCandidate(generation, episode);
+    } catch (error) {
+      if (mounted && generation == _playGeneration) {
+        if (_candidateSequence == null) {
+          setState(() {
+            _hasError = true;
+            _isLoading = false;
+          });
+        } else {
+          await _handlePlaybackFailure(generation, error);
+        }
       }
+    }
+  }
 
+  Future<void> _setupCandidate(int generation, Episode episode) async {
+    final sequence = _candidateSequence;
+    if (sequence == null || !mounted || generation != _playGeneration) return;
+    debugPrint(
+      '[playback] seriesId=${episode.seriesId} episodeId=${episode.id} '
+      'candidateIndex=${sequence.currentIndex} '
+      'candidateCount=${sequence.candidateCount} '
+      'mediaKind=${playbackMediaKind(sequence.currentUrl).name} setup=START',
+    );
+    await _playerController.setupDataSource(
+      buildNetworkVideoDataSource(sequence.currentUrl),
+    );
+    if (!mounted || generation != _playGeneration) return;
+
+    setState(() {
+      _attachedEpisodeId = episode.id;
+      _isLoading = false;
+      _hasError = false;
+    });
+    debugPrint(
+      '[playback] seriesId=${episode.seriesId} episodeId=${episode.id} '
+      'candidateIndex=${sequence.currentIndex} setup=OK',
+    );
+
+    await _waitEndOfFrame();
+    if (!mounted || generation != _playGeneration) return;
+    await _safePlay();
+  }
+
+  Future<void> _handlePlaybackFailure(int generation, Object error) async {
+    if (_handlingPlaybackFailure || !mounted || generation != _playGeneration) {
+      return;
+    }
+    _handlingPlaybackFailure = true;
+    try {
+      final episodes = ref.read(shortsFeedNotifierProvider).value?.episodes ??
+          const <Episode>[];
+      if (_current < 0 || _current >= episodes.length) return;
+      final episode = episodes[_current];
+      final sequence = _candidateSequence;
+      if (sequence == null) return;
       setState(() {
-        _attachedEpisodeId = episode.id;
-        _isLoading = false;
+        _isLoading = true;
+        _hasError = false;
       });
-
-      await _waitEndOfFrame();
-      if (!mounted || generation != _playGeneration) {
-        return;
+      debugPrint(
+        '[playback] seriesId=${episode.seriesId} episodeId=${episode.id} '
+        'candidateIndex=${sequence.currentIndex} '
+        'playerException=${error.runtimeType}',
+      );
+      while (mounted && generation == _playGeneration) {
+        if (sequence.moveNext()) {
+          try {
+            await _setupCandidate(generation, episode);
+            return;
+          } on Object catch (candidateError) {
+            debugPrint(
+              '[playback] episodeId=${episode.id} '
+              'candidateIndex=${sequence.currentIndex} '
+              'setupException=${candidateError.runtimeType}',
+            );
+            continue;
+          }
+        }
+        if (!sequence.canResolveAgain) break;
+        _mediaCache.remove(episode.id);
+        try {
+          final refreshed = await _mediaFor(episode);
+          sequence.replaceAfterResolve(refreshed);
+          continue;
+        } on Object catch (resolveError) {
+          debugPrint(
+            '[playback] episodeId=${episode.id} '
+            'watchResolveRetry=${resolveError.runtimeType}',
+          );
+          break;
+        }
       }
-
-      await _safePlay();
-    } catch (_) {
       if (mounted && generation == _playGeneration) {
         setState(() {
           _hasError = true;
           _isLoading = false;
         });
       }
+    } finally {
+      _handlingPlaybackFailure = false;
     }
   }
 
-  Future<String> _urlFor(Episode episode) {
-    return _urlCache.getOrCreate(
+  Future<PlayableMedia> _mediaFor(Episode episode) {
+    return _mediaCache.getOrCreate(
       episode.id,
-      () => ref.read(videoSourceProvider).playableUrl(
+      () => ref.read(videoSourceProvider).playableMedia(
             seriesId: episode.seriesId,
             episodeId: episode.id,
             storagePath: episode.videoUrl,
             chapterIndex: canonicalChapterIndex(episode),
           ),
     );
+  }
+
+  Future<void> _recordShortsHistory() async {
+    final state = ref.read(shortsFeedNotifierProvider).value;
+    if (state == null || _current < 0 || _current >= state.episodes.length) {
+      return;
+    }
+    final episode = state.episodes[_current];
+    if (_historyRecordedEpisodeIds.contains(episode.id)) return;
+    final series = state.seriesById[episode.seriesId];
+    if (series == null) return;
+    final user = ref.read(currentAppUserDocProvider).value;
+    final entry = WatchHistoryEntry(
+      seriesId: series.id,
+      series: series,
+      episodeId: episode.id,
+      episodeOrder: episode.order,
+      chapterIndex: canonicalChapterIndex(episode),
+      positionMs: (_playbackProgress * _playbackDurationMs).round(),
+      durationMs: _playbackDurationMs,
+      watchedAt: DateTime.now().toUtc(),
+    );
+    try {
+      _historyRecordedEpisodeIds.add(episode.id);
+      await ref.read(localLibraryRepositoryProvider).upsertHistory(
+            LocalLibraryRepository.scopeFor(user?.id),
+            entry,
+          );
+      if (user != null) {
+        await ref.read(userRepositoryProvider).saveWatchHistory(user.id, entry);
+      }
+    } on Object {
+      // Preview scrolling must never fail because optional history sync failed.
+    }
   }
 
   void _prefetchUrls(List<Episode> episodes) {
@@ -462,7 +597,10 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
           !episode.sourceLocked &&
           accessFor(episode, user, effectiveVip: effectiveVip) ==
               EpisodeAccessState.open) {
-        unawaited(_urlFor(episode).catchError((_) => ''));
+        unawaited(_mediaFor(episode).catchError((_) => const PlayableMedia(
+              primaryUrl: '',
+              candidateUrls: [],
+            )));
       }
     }
   }

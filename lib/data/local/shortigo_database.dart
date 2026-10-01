@@ -40,7 +40,8 @@ class ShortigoDatabase extends _$ShortigoDatabase {
   Future<String?> readSetting(String key) async {
     final row = await (select(
       cachedSeries,
-    )..where((table) => table.id.equals(_settingId(key)))).getSingleOrNull();
+    )..where((table) => table.id.equals(_settingId(key))))
+        .getSingleOrNull();
     return row == null ? null : String.fromCharCodes(row.payload);
   }
 
@@ -58,7 +59,8 @@ class ShortigoDatabase extends _$ShortigoDatabase {
   Future<void> deleteSetting(String key) {
     return (delete(
       cachedSeries,
-    )..where((row) => row.id.equals(_settingId(key)))).go();
+    )..where((row) => row.id.equals(_settingId(key))))
+        .go();
   }
 
   Future<List<CachedSeriesRow>> readGuestFavorites() {
@@ -66,6 +68,32 @@ class ShortigoDatabase extends _$ShortigoDatabase {
           ..where((table) => table.category.equals('guest-favorite'))
           ..orderBy([(row) => OrderingTerm.desc(row.cachedAt)]))
         .get();
+  }
+
+  Future<List<CachedSeriesRow>> readCachedCategory(String category) {
+    return (select(cachedSeries)
+          ..where((table) => table.category.equals(category))
+          ..orderBy([(row) => OrderingTerm.desc(row.cachedAt)]))
+        .get();
+  }
+
+  Future<void> writeCachedRecord({
+    required String id,
+    required Uint8List payload,
+    required String category,
+  }) {
+    return into(cachedSeries).insertOnConflictUpdate(
+      CachedSeriesCompanion.insert(
+        id: id,
+        payload: payload,
+        cachedAt: DateTime.now().toUtc(),
+        category: category,
+      ),
+    );
+  }
+
+  Future<void> deleteCachedRecord(String id) {
+    return (delete(cachedSeries)..where((row) => row.id.equals(id))).go();
   }
 
   Future<void> writeGuestFavorite({
@@ -85,14 +113,14 @@ class ShortigoDatabase extends _$ShortigoDatabase {
   Future<void> deleteGuestFavorite(String seriesId) {
     return (delete(
       cachedSeries,
-    )..where((row) => row.id.equals(_guestFavoriteId(seriesId)))).go();
+    )..where((row) => row.id.equals(_guestFavoriteId(seriesId))))
+        .go();
   }
 
   Future<bool> hasGuestFavorite(String seriesId) async {
-    final row =
-        await (select(cachedSeries)
-              ..where((table) => table.id.equals(_guestFavoriteId(seriesId))))
-            .getSingleOrNull();
+    final row = await (select(cachedSeries)
+          ..where((table) => table.id.equals(_guestFavoriteId(seriesId))))
+        .getSingleOrNull();
     return row != null;
   }
 

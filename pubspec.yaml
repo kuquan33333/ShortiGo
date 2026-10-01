@@ -58,7 +58,7 @@ dependencies:
   # Util
   rxdart: ^0.28.0
   collection: ^1.18.0
-  better_player_plus: ^1.0.8
+  better_player_plus: 1.4.1
   share_plus: ^13.1.0
 
 dev_dependencies:

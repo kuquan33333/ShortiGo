@@ -95,6 +95,18 @@ class AppLocalizationsEn extends AppLocalizations {
   String get noResults => 'No results found.';
 
   @override
+  String get playbackError => 'Unable to play this video source right now.';
+
+  @override
+  String get watchHistory => 'Watch history';
+
+  @override
+  String get savedSeries => 'Saved';
+
+  @override
+  String get noWatchHistory => 'Your watch history will appear here.';
+
+  @override
   String get noShorts => 'No shorts yet.';
 
   @override

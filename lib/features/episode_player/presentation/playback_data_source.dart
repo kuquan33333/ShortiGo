@@ -3,8 +3,35 @@ import 'dart:math' as math;
 import 'package:better_player_plus/better_player_plus.dart';
 
 import '../../../domain/entities/episode.dart';
+import '../../../domain/entities/playable_media.dart';
 
 enum PlaybackMediaKind { hls, mp4, unknown }
+
+class PlaybackCandidateSequence {
+  PlaybackCandidateSequence(PlayableMedia media) : _media = media;
+
+  PlayableMedia _media;
+  int _index = 0;
+  bool _resolveRetryUsed = false;
+
+  String get currentUrl => _media.candidateUrls[_index];
+  int get currentIndex => _index;
+  int get candidateCount => _media.candidateUrls.length;
+  bool get hasNext => _index + 1 < _media.candidateUrls.length;
+  bool get canResolveAgain => !_resolveRetryUsed;
+
+  bool moveNext() {
+    if (!hasNext) return false;
+    _index++;
+    return true;
+  }
+
+  void replaceAfterResolve(PlayableMedia media) {
+    _media = media;
+    _index = 0;
+    _resolveRetryUsed = true;
+  }
+}
 
 PlaybackMediaKind playbackMediaKind(String url) {
   final parsed = Uri.tryParse(url);

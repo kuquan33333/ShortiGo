@@ -34,6 +34,7 @@ FriendlyError localizedFriendlyErrorFor(
       'http-404' => l10n.notFoundError,
       'source-locked' => l10n.sourceLockedError,
       'http-403' => l10n.sourceLockedError,
+      'playback-failed' => l10n.playbackError,
       'http-502' || 'http-504' => l10n.contentServerUnavailable,
       _ => l10n.genericContentApiError,
     };

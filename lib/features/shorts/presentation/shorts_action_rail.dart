@@ -12,7 +12,7 @@ import '../../../l10n/app_localizations.dart';
 import '../../../domain/entities/episode.dart';
 import '../../../domain/entities/series.dart';
 import '../../../domain/entities/user.dart';
-import '../../my_list/application/my_list_notifier.dart';
+import '../../../shared/widgets/save_series_button.dart';
 import '../application/shorts_share_link.dart';
 
 class ShortsActionRail extends ConsumerStatefulWidget {
@@ -108,7 +108,14 @@ class _ShortsActionRailState extends ConsumerState<ShortsActionRail> {
             episodeId: widget.episode.id,
             liked: next,
           );
+      if (mounted) setState(() => _liked = null);
     } catch (error) {
+      if (mounted) {
+        setState(() {
+          _liked = liked;
+          _likeCount = (_likeCount + (liked ? 1 : -1)).clamp(0, 1 << 31);
+        });
+      }
       _showError(error);
     }
   }
@@ -119,23 +126,23 @@ class _ShortsActionRailState extends ConsumerState<ShortsActionRail> {
       _saved = next;
       _saveCount = (_saveCount + (next ? 1 : -1)).clamp(0, 1 << 31);
     });
-    if (user == null) {
-      final favorites = ref.read(guestFavoritesRepositoryProvider);
-      if (next) {
-        await favorites.save(widget.series);
-      } else {
-        await favorites.remove(widget.series.id);
-      }
-      ref.invalidate(guestFavoriteSavedProvider(widget.series.id));
-      ref.invalidate(myListNotifierProvider);
-      return;
-    }
     try {
-      await ref.read(socialActionsGatewayProvider).setSeriesSaved(
-            seriesId: widget.series.id,
-            saved: next,
-          );
+      await toggleSeriesSaved(
+        context: context,
+        ref: ref,
+        seriesId: widget.series.id,
+        series: widget.series,
+        user: user,
+        isSaved: saved,
+      );
+      if (mounted) setState(() => _saved = null);
     } catch (error) {
+      if (mounted) {
+        setState(() {
+          _saved = saved;
+          _saveCount = (_saveCount + (saved ? 1 : -1)).clamp(0, 1 << 31);
+        });
+      }
       _showError(error);
     }
   }

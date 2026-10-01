@@ -266,6 +266,30 @@ abstract class AppLocalizations {
   /// **'No results found.'**
   String get noResults;
 
+  /// No description provided for @playbackError.
+  ///
+  /// In en, this message translates to:
+  /// **'Unable to play this video source right now.'**
+  String get playbackError;
+
+  /// No description provided for @watchHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Watch history'**
+  String get watchHistory;
+
+  /// No description provided for @savedSeries.
+  ///
+  /// In en, this message translates to:
+  /// **'Saved'**
+  String get savedSeries;
+
+  /// No description provided for @noWatchHistory.
+  ///
+  /// In en, this message translates to:
+  /// **'Your watch history will appear here.'**
+  String get noWatchHistory;
+
   /// No description provided for @noShorts.
   ///
   /// In en, this message translates to:

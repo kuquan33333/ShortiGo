@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/error/friendly_error.dart';
 import '../../core/providers.dart';
+import '../../data/local/local_library_repository.dart';
 import '../../core/theme/app_colors.dart';
 import '../../domain/entities/user.dart';
 import '../../domain/entities/series.dart';
@@ -19,10 +21,14 @@ Future<void> toggleSeriesSaved({
   if (user == null) {
     if (series == null) return;
     final favorites = ref.read(guestFavoritesRepositoryProvider);
+    final library = ref.read(localLibraryRepositoryProvider);
+    final scope = LocalLibraryRepository.scopeFor(null);
     if (isSaved) {
       await favorites.remove(seriesId);
+      await library.removeSeries(scope, seriesId);
     } else {
       await favorites.save(series);
+      await library.saveSeries(scope, series);
     }
     ref.invalidate(guestFavoriteSavedProvider(seriesId));
     ref.invalidate(myListNotifierProvider);
@@ -33,15 +39,24 @@ Future<void> toggleSeriesSaved({
     await ref
         .read(socialActionsGatewayProvider)
         .setSeriesSaved(seriesId: seriesId, saved: false);
+    await ref
+        .read(localLibraryRepositoryProvider)
+        .removeSeries(LocalLibraryRepository.scopeFor(user.id), seriesId);
   } else {
     await ref
         .read(socialActionsGatewayProvider)
         .setSeriesSaved(seriesId: seriesId, saved: true);
+    if (series != null) {
+      await ref
+          .read(localLibraryRepositoryProvider)
+          .saveSeries(LocalLibraryRepository.scopeFor(user.id), series);
+    }
   }
+  ref.invalidate(myListNotifierProvider);
 }
 
 /// Full-width save button for series detail.
-class SaveSeriesFilledButton extends ConsumerWidget {
+class SaveSeriesFilledButton extends ConsumerStatefulWidget {
   const SaveSeriesFilledButton(
       {super.key, required this.seriesId, this.series});
 
@@ -49,30 +64,63 @@ class SaveSeriesFilledButton extends ConsumerWidget {
   final Series? series;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SaveSeriesFilledButton> createState() =>
+      _SaveSeriesFilledButtonState();
+}
+
+class _SaveSeriesFilledButtonState
+    extends ConsumerState<SaveSeriesFilledButton> {
+  bool? _optimisticSaved;
+
+  @override
+  void didUpdateWidget(covariant SaveSeriesFilledButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.seriesId != widget.seriesId) _optimisticSaved = null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(currentAppUserDocProvider).value;
-    final guestSaved =
-        ref.watch(guestFavoriteSavedProvider(seriesId)).value ?? false;
-    final isSaved = user?.favoriteSeriesIds.contains(seriesId) ?? guestSaved;
+    final guestSaved = ref.watch(guestFavoriteSavedProvider(widget.seriesId));
+    final remoteSaved = user?.favoriteSeriesIds.contains(widget.seriesId) ??
+        (guestSaved.value ?? false);
+    final isSaved = _optimisticSaved ?? remoteSaved;
     final l10n = AppLocalizations.of(context)!;
 
     return FilledButton.icon(
-      onPressed: () => toggleSeriesSaved(
-        context: context,
-        ref: ref,
-        seriesId: seriesId,
-        series: series,
-        user: user,
-        isSaved: isSaved,
-      ),
+      onPressed: () => _toggle(context, user, isSaved),
       icon: Icon(isSaved ? Icons.bookmark : Icons.bookmark_outline),
       label: Text(isSaved ? l10n.saved : l10n.save),
     );
   }
+
+  Future<void> _toggle(
+      BuildContext context, AppUser? user, bool isSaved) async {
+    final next = !isSaved;
+    setState(() => _optimisticSaved = next);
+    try {
+      await toggleSeriesSaved(
+        context: context,
+        ref: ref,
+        seriesId: widget.seriesId,
+        series: widget.series,
+        user: user,
+        isSaved: isSaved,
+      );
+      if (mounted) setState(() => _optimisticSaved = null);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _optimisticSaved = isSaved);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(localizedFriendlyErrorFor(context, error).message)),
+      );
+    }
+  }
 }
 
 /// Circular glass save control for Shorts info panel.
-class SaveSeriesCircleButton extends ConsumerWidget {
+class SaveSeriesCircleButton extends ConsumerStatefulWidget {
   const SaveSeriesCircleButton({
     super.key,
     required this.seriesId,
@@ -85,24 +133,57 @@ class SaveSeriesCircleButton extends ConsumerWidget {
   final String countLabel;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SaveSeriesCircleButton> createState() =>
+      _SaveSeriesCircleButtonState();
+}
+
+class _SaveSeriesCircleButtonState
+    extends ConsumerState<SaveSeriesCircleButton> {
+  bool? _optimisticSaved;
+
+  @override
+  void didUpdateWidget(covariant SaveSeriesCircleButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.seriesId != widget.seriesId) _optimisticSaved = null;
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(currentAppUserDocProvider).value;
-    final guestSaved =
-        ref.watch(guestFavoriteSavedProvider(seriesId)).value ?? false;
-    final isSaved = user?.favoriteSeriesIds.contains(seriesId) ?? guestSaved;
+    final guestSaved = ref.watch(guestFavoriteSavedProvider(widget.seriesId));
+    final remoteSaved = user?.favoriteSeriesIds.contains(widget.seriesId) ??
+        (guestSaved.value ?? false);
+    final isSaved = _optimisticSaved ?? remoteSaved;
 
     return _GlassActionButton(
       icon: isSaved ? Icons.bookmark : Icons.bookmark_border,
-      label: countLabel,
-      onPressed: () => toggleSeriesSaved(
+      label: widget.countLabel,
+      onPressed: () => _toggle(context, user, isSaved),
+    );
+  }
+
+  Future<void> _toggle(
+      BuildContext context, AppUser? user, bool isSaved) async {
+    final next = !isSaved;
+    setState(() => _optimisticSaved = next);
+    try {
+      await toggleSeriesSaved(
         context: context,
         ref: ref,
-        seriesId: seriesId,
-        series: series,
+        seriesId: widget.seriesId,
+        series: widget.series,
         user: user,
         isSaved: isSaved,
-      ),
-    );
+      );
+      if (mounted) setState(() => _optimisticSaved = null);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _optimisticSaved = isSaved);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content: Text(localizedFriendlyErrorFor(context, error).message)),
+      );
+    }
   }
 }
 

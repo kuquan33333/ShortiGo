@@ -284,6 +284,31 @@ class ContentApiSearchPage {
 }
 
 @immutable
+class ContentApiPlaybackQuality {
+  const ContentApiPlaybackQuality({
+    required this.quality,
+    required this.videoPath,
+    this.isDefault = false,
+  });
+
+  final int quality;
+  final String videoPath;
+  final bool isDefault;
+
+  factory ContentApiPlaybackQuality.fromJson(Map<String, dynamic> json) {
+    final videoPath = json['videoPath']?.toString().trim() ??
+        json['videoUrl']?.toString().trim() ??
+        json['url']?.toString().trim() ??
+        '';
+    return ContentApiPlaybackQuality(
+      quality: _qualityInt(json['quality']),
+      videoPath: videoPath,
+      isDefault: json['isDefault'] == true || json['default'] == true,
+    );
+  }
+}
+
+@immutable
 class ContentApiPlayback {
   const ContentApiPlayback({
     required this.bookId,
@@ -291,6 +316,7 @@ class ContentApiPlayback {
     required this.videoUrl,
     this.provider,
     this.expiresAt,
+    this.qualities = const [],
   });
 
   final String bookId;
@@ -298,18 +324,29 @@ class ContentApiPlayback {
   final String videoUrl;
   final String? provider;
   final String? expiresAt;
+  final List<ContentApiPlaybackQuality> qualities;
 
   factory ContentApiPlayback.fromJson(Map<String, dynamic> json) {
     final videoUrl = json['videoUrl']?.toString() ?? '';
     if (videoUrl.isEmpty) {
       throw const ContentApiException(code: 'invalid-schema');
     }
+    final rawQualities = json['qualities'];
     return ContentApiPlayback(
       bookId: json['bookId']?.toString() ?? '',
       chapterIndex: _asInt(json['chapterIndex']) ?? 0,
       videoUrl: videoUrl,
       provider: json['provider']?.toString(),
       expiresAt: json['expiresAt']?.toString(),
+      qualities: rawQualities is List
+          ? rawQualities
+              .whereType<Map<String, dynamic>>()
+              .map((item) => ContentApiPlaybackQuality.fromJson(
+                    Map<String, dynamic>.from(item),
+                  ))
+              .where((item) => item.videoPath.isNotEmpty)
+              .toList(growable: false)
+          : const [],
     );
   }
 }
@@ -341,4 +378,10 @@ class ContentApiSourceLockedException extends ContentApiException {
 int? _asInt(Object? value) {
   if (value is num) return value.toInt();
   return int.tryParse(value?.toString() ?? '');
+}
+
+int _qualityInt(Object? value) {
+  if (value is num) return value.toInt();
+  final text = value?.toString().trim().toLowerCase() ?? '';
+  return int.tryParse(text.replaceAll('p', '')) ?? 0;
 }

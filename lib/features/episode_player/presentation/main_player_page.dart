@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:better_player_plus/better_player_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -10,9 +11,13 @@ import '../../../core/error/friendly_error.dart';
 import '../../../core/async/retryable_future_cache.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_colors.dart';
+import '../../../data/local/local_library_repository.dart';
+import '../../../data/remote/content_api_models.dart';
 import '../../../domain/entities/episode.dart';
+import '../../../domain/entities/playable_media.dart';
 import '../../../domain/entities/series.dart';
 import '../../../domain/entities/user.dart';
+import '../../../domain/entities/watch_history_entry.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/save_series_button.dart';
 import '../../../shared/widgets/app_pressable.dart';
@@ -62,10 +67,12 @@ class MainPlayerPage extends ConsumerStatefulWidget {
     super.key,
     required this.seriesId,
     this.episodeId,
+    this.resumePositionMs,
   });
 
   final String seriesId;
   final String? episodeId;
+  final int? resumePositionMs;
 
   @override
   ConsumerState<MainPlayerPage> createState() => _MainPlayerPageState();
@@ -75,7 +82,7 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
     with WidgetsBindingObserver {
   late final BetterPlayerController _controller;
   late PageController _pageController;
-  final _urlCache = RetryableFutureCache<String, String>();
+  final _mediaCache = RetryableFutureCache<String, PlayableMedia>();
 
   Series? _series;
   List<Episode> _episodes = const [];
@@ -91,6 +98,11 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
   double _position = 0;
   double _duration = 0;
   Object? _error;
+  PlaybackCandidateSequence? _candidateSequence;
+  bool _handlingPlaybackFailure = false;
+  bool _historyWriteInFlight = false;
+  DateTime? _lastHistoryWriteAt;
+  DateTime? _lastCloudHistoryWriteAt;
 
   @override
   void initState() {
@@ -112,9 +124,10 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
 
   @override
   void dispose() {
+    unawaited(_recordHistory(force: true));
     WidgetsBinding.instance.removeObserver(this);
     _pageController.dispose();
-    _urlCache.clear();
+    _mediaCache.clear();
     _transientControlTimer?.cancel();
     _controller
       ..removeEventsListener(_onPlayerEvent)
@@ -127,6 +140,7 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
     if (shouldPauseVideoForLifecycle(state)) {
       _paused = true;
       unawaited(_controller.pause());
+      unawaited(_recordHistory(force: true));
     }
   }
 
@@ -161,14 +175,21 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
   void _onPlayerEvent(BetterPlayerEvent event) {
     if (!mounted) return;
     if (event.betterPlayerEventType == BetterPlayerEventType.exception) {
-      if (_loading) return;
-      setState(() => _error = event.parameters?['exception'] ?? 'playback');
+      if (_loading || _handlingPlaybackFailure) return;
+      final exception = event.parameters?['exception'];
+      unawaited(
+        _handlePlaybackFailure(
+          _generation,
+          exception is Object ? exception : 'player-exception',
+        ),
+      );
       return;
     }
     if (event.betterPlayerEventType == BetterPlayerEventType.finished) {
       if (_loading) return;
       if (_ended) return;
       _ended = true;
+      unawaited(_recordHistory(force: true));
       if (nextEpisodeIndex(_currentIndex, _episodes.length) >= 0) {
         unawaited(_pageController.nextPage(
           duration: const Duration(milliseconds: 280),
@@ -188,13 +209,14 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
       _position = position.inMilliseconds.toDouble();
       _duration = duration.inMilliseconds.toDouble();
     });
+    unawaited(_recordHistory());
   }
 
   Future<void> _switchToEpisode(int index, {required bool autoplay}) async {
     if (index < 0 || index >= _episodes.length) return;
     final generation = ++_generation;
     final episode = _episodes[index];
-    _urlCache.retainOnly(
+    _mediaCache.retainOnly(
       _episodes
           .asMap()
           .entries
@@ -207,6 +229,7 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
       _loading = true;
       _controllerReady = false;
       _error = null;
+      _candidateSequence = null;
       _ended = false;
       _position = 0;
       _duration = 0;
@@ -225,26 +248,110 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
     }
 
     try {
-      final url = await _urlFor(episode);
+      final media = await _mediaFor(episode);
       if (!mounted || generation != _generation) return;
-      await _controller.pause();
-      await _controller.setupDataSource(
-        buildNetworkVideoDataSource(url),
-      );
-      if (!mounted || generation != _generation) return;
-      setState(() {
-        _loading = false;
-        _controllerReady = true;
-        _paused = !autoplay;
-      });
-      if (autoplay) await _controller.play();
-      _prefetchAdjacent(index);
+      _candidateSequence = PlaybackCandidateSequence(media);
+      await _setupCandidate(generation, autoplay: autoplay);
     } catch (error) {
+      if (_candidateSequence == null) {
+        if (!mounted || generation != _generation) return;
+        setState(() {
+          _loading = false;
+          _controllerReady = false;
+          _error = error;
+        });
+      } else {
+        await _handlePlaybackFailure(generation, error);
+      }
+    }
+  }
+
+  Future<void> _setupCandidate(
+    int generation, {
+    required bool autoplay,
+  }) async {
+    final sequence = _candidateSequence;
+    if (sequence == null || !mounted || generation != _generation) return;
+    final url = sequence.currentUrl;
+    _playbackLog(
+      'candidateIndex=${sequence.currentIndex} '
+      'candidateCount=${sequence.candidateCount} '
+      'mediaKind=${playbackMediaKind(url).name} setup=START',
+    );
+    await _controller.pause();
+    if (!mounted || generation != _generation) return;
+    await _controller.setupDataSource(buildNetworkVideoDataSource(url));
+    if (!mounted || generation != _generation) return;
+    setState(() {
+      _loading = false;
+      _controllerReady = true;
+      _error = null;
+      _paused = !autoplay;
+    });
+    if (widget.resumePositionMs != null &&
+        widget.episodeId == _episodes[_currentIndex].id &&
+        widget.resumePositionMs! > 0) {
+      await _controller.seekTo(
+        Duration(milliseconds: widget.resumePositionMs!),
+      );
+    }
+    _playbackLog(
+      'candidateIndex=${sequence.currentIndex} setup=OK',
+    );
+    if (autoplay) await _controller.play();
+    _prefetchAdjacent(_currentIndex);
+  }
+
+  Future<void> _handlePlaybackFailure(int generation, Object error) async {
+    if (_handlingPlaybackFailure || !mounted || generation != _generation) {
+      return;
+    }
+    _handlingPlaybackFailure = true;
+    try {
+      final episode = _episodes[_currentIndex];
+      final sequence = _candidateSequence;
+      if (sequence == null) return;
+      setState(() {
+        _loading = true;
+        _controllerReady = false;
+        _error = null;
+      });
+      _playbackLog(
+        'candidateIndex=${sequence.currentIndex} '
+        'playerException=${error.runtimeType}',
+      );
+      while (mounted && generation == _generation) {
+        if (sequence.moveNext()) {
+          try {
+            await _setupCandidate(generation, autoplay: !_paused);
+            return;
+          } on Object catch (candidateError) {
+            _playbackLog(
+              'candidateIndex=${sequence.currentIndex} '
+              'setupException=${candidateError.runtimeType}',
+            );
+            continue;
+          }
+        }
+        if (!sequence.canResolveAgain) break;
+        _mediaCache.remove(episode.id);
+        try {
+          final refreshed = await _mediaFor(episode);
+          sequence.replaceAfterResolve(refreshed);
+          continue;
+        } on Object catch (resolveError) {
+          _playbackLog('watchResolveRetry=${resolveError.runtimeType}');
+          break;
+        }
+      }
       if (!mounted || generation != _generation) return;
       setState(() {
         _loading = false;
-        _error = error;
+        _controllerReady = false;
+        _error = const ContentApiException(code: 'playback-failed');
       });
+    } finally {
+      _handlingPlaybackFailure = false;
     }
   }
 
@@ -257,6 +364,7 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
     });
     if (_paused) {
       unawaited(_controller.pause());
+      unawaited(_recordHistory(force: true));
     } else {
       unawaited(_controller.play());
       _transientControlTimer?.cancel();
@@ -281,10 +389,10 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
     return accessFor(episode, user, effectiveVip: effectiveVip);
   }
 
-  Future<String> _urlFor(Episode episode) {
-    return _urlCache.getOrCreate(
+  Future<PlayableMedia> _mediaFor(Episode episode) {
+    return _mediaCache.getOrCreate(
       episode.id,
-      () => ref.read(videoSourceProvider).playableUrl(
+      () => ref.read(videoSourceProvider).playableMedia(
             seriesId: widget.seriesId,
             episodeId: episode.id,
             storagePath: episode.videoUrl,
@@ -293,12 +401,61 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
     );
   }
 
+  Future<void> _recordHistory({bool force = false}) async {
+    final series = _series;
+    if (series == null || _episodes.isEmpty || !_controllerReady) return;
+    final now = DateTime.now().toUtc();
+    final last = _lastHistoryWriteAt;
+    if (!force &&
+        last != null &&
+        now.difference(last) < const Duration(seconds: 5)) {
+      return;
+    }
+    if (_historyWriteInFlight) return;
+    final episode = _episodes[_currentIndex];
+    _historyWriteInFlight = true;
+    _lastHistoryWriteAt = now;
+    final user = ref.read(currentAppUserDocProvider).value;
+    final entry = WatchHistoryEntry(
+      seriesId: series.id,
+      series: series,
+      episodeId: episode.id,
+      episodeOrder: episode.order,
+      chapterIndex: canonicalChapterIndex(episode),
+      positionMs:
+          _position.clamp(0, _duration > 0 ? _duration : _position).round(),
+      durationMs: _duration.round(),
+      watchedAt: now,
+    );
+    try {
+      final library = ref.read(localLibraryRepositoryProvider);
+      final scope = LocalLibraryRepository.scopeFor(user?.id);
+      await library.upsertHistory(scope, entry);
+      if (user != null &&
+          (force ||
+              _lastCloudHistoryWriteAt == null ||
+              now.difference(_lastCloudHistoryWriteAt!) >=
+                  const Duration(seconds: 20))) {
+        await ref.read(userRepositoryProvider).saveWatchHistory(user.id, entry);
+        _lastCloudHistoryWriteAt = now;
+      }
+    } on Object {
+      // Local playback must not fail because optional history sync is down.
+    } finally {
+      _historyWriteInFlight = false;
+    }
+  }
+
   void _prefetchAdjacent(int index) {
     for (final adjacent in adjacentEpisodeIndices(index, _episodes.length)) {
       final episode = _episodes[adjacent];
       if (_accessFor(episode) != EpisodeAccessState.open) continue;
-      unawaited(_urlFor(episode).then<void>((_) {}, onError: (_, __) {}));
+      unawaited(_mediaFor(episode).then<void>((_) {}, onError: (_, __) {}));
     }
+  }
+
+  void _playbackLog(String message) {
+    if (kDebugMode) debugPrint('[playback] $message');
   }
 
   Future<void> _showEpisodes() async {
@@ -394,9 +551,10 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
         controller: _pageController,
         scrollDirection: Axis.vertical,
         itemCount: _episodes.length,
-        onPageChanged: (index) => unawaited(
-          _switchToEpisode(index, autoplay: true),
-        ),
+        onPageChanged: (index) {
+          unawaited(_recordHistory(force: true));
+          unawaited(_switchToEpisode(index, autoplay: true));
+        },
         itemBuilder: (context, index) {
           final active = index == _currentIndex;
           final item = _episodes[index];
@@ -744,39 +902,13 @@ class _PlayerRail extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context)!;
-    final liked = user?.likedEpisodeIds.contains(episode.id) ?? false;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
         SaveSeriesCircleButton(
             seriesId: series.id, series: series, countLabel: l10n.save),
         const SizedBox(height: 14),
-        _RailAction(
-          icon: liked ? Icons.favorite : Icons.favorite_border,
-          label: l10n.like,
-          color: liked ? AppColors.primary : Colors.white,
-          onTap: () async {
-            if (user == null) {
-              if (context.mounted) await context.push('/login');
-              return;
-            }
-            try {
-              await ref.read(socialActionsGatewayProvider).setEpisodeLiked(
-                    episodeId: episode.id,
-                    liked: !liked,
-                  );
-            } catch (error) {
-              if (!context.mounted) return;
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text(
-                    localizedFriendlyErrorFor(context, error).message,
-                  ),
-                ),
-              );
-            }
-          },
-        ),
+        _LikeRailAction(user: user, episode: episode),
         const SizedBox(height: 14),
         _RailAction(
             icon: Icons.playlist_play_rounded,
@@ -787,6 +919,67 @@ class _PlayerRail extends ConsumerWidget {
             icon: Icons.share_rounded, label: l10n.share, onTap: onShare),
       ],
     );
+  }
+}
+
+class _LikeRailAction extends ConsumerStatefulWidget {
+  const _LikeRailAction({required this.user, required this.episode});
+
+  final AppUser? user;
+  final Episode episode;
+
+  @override
+  ConsumerState<_LikeRailAction> createState() => _LikeRailActionState();
+}
+
+class _LikeRailActionState extends ConsumerState<_LikeRailAction> {
+  bool? _optimisticLiked;
+
+  @override
+  void didUpdateWidget(covariant _LikeRailAction oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.episode.id != widget.episode.id ||
+        oldWidget.user?.id != widget.user?.id) {
+      _optimisticLiked = null;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context)!;
+    final liked = _optimisticLiked ??
+        (widget.user?.likedEpisodeIds.contains(widget.episode.id) ?? false);
+    return _RailAction(
+      icon: liked ? Icons.favorite : Icons.favorite_border,
+      label: l10n.like,
+      color: liked ? AppColors.primary : Colors.white,
+      onTap: () => _toggle(context, liked),
+    );
+  }
+
+  Future<void> _toggle(BuildContext context, bool liked) async {
+    final user = widget.user;
+    if (user == null) {
+      await context.push('/login');
+      return;
+    }
+    final next = !liked;
+    setState(() => _optimisticLiked = next);
+    try {
+      await ref.read(socialActionsGatewayProvider).setEpisodeLiked(
+            episodeId: widget.episode.id,
+            liked: next,
+          );
+      if (mounted) setState(() => _optimisticLiked = null);
+    } catch (error) {
+      if (!mounted) return;
+      setState(() => _optimisticLiked = liked);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(localizedFriendlyErrorFor(context, error).message),
+        ),
+      );
+    }
   }
 }
 

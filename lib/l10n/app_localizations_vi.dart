@@ -95,6 +95,18 @@ class AppLocalizationsVi extends AppLocalizations {
   String get noResults => 'Không tìm thấy kết quả.';
 
   @override
+  String get playbackError => 'Không thể phát nguồn video này lúc này.';
+
+  @override
+  String get watchHistory => 'Lịch sử xem';
+
+  @override
+  String get savedSeries => 'Phim đã lưu';
+
+  @override
+  String get noWatchHistory => 'Lịch sử xem của bạn sẽ xuất hiện ở đây.';
+
+  @override
   String get noShorts => 'Chưa có phim ngắn.';
 
   @override

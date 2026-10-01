@@ -84,6 +84,20 @@ void main() {
       expect(episode.data()!['shareCount'], 2);
     });
 
+    test('user preferences do not require a Firestore catalog document',
+        () async {
+      final db = FakeFirebaseFirestore();
+      await _seedUser(db);
+      final gateway = FirestoreSocialActionsGateway(db: db, userId: 'u1');
+
+      await gateway.setSeriesSaved(seriesId: 'remote-series', saved: true);
+      await gateway.setEpisodeLiked(episodeId: 'remote-episode', liked: true);
+
+      final user = await db.collection('users').doc('u1').get();
+      expect(user.data()!['favoriteSeriesIds'], ['remote-series']);
+      expect(user.data()!['likedEpisodeIds'], ['remote-episode']);
+    });
+
     test('following and unfollowing a series updates user state and count',
         () async {
       final db = FakeFirebaseFirestore();
