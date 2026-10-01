@@ -23,6 +23,35 @@ http.Response _ok(Object data) => http.Response(
     );
 
 void main() {
+  test('collectionPage maps a page and carries opaque cursor state', () async {
+    final client = ContentApiClient(
+      defaultBaseUrl: 'https://example.com',
+      httpClient: MockClient((request) async {
+        expect(request.url.path, '/api/collection/romance/2');
+        expect(request.url.queryParameters['cursor'], 'cursor-from-server');
+        return _ok({
+          'slug': 'romance',
+          'title': 'Romance',
+          'page': 2,
+          'pageSize': 30,
+          'list': [_book('collection-2')],
+          'hasMore': true,
+          'nextCursor': 'cursor-next',
+        });
+      }),
+    );
+    final page = await RemoteSeriesRepository(client).collectionPage(
+      slug: 'romance',
+      page: 2,
+      cursor: 'cursor-from-server',
+    );
+
+    expect(page.page, 2);
+    expect(page.items.single.id, 'collection-2');
+    expect(page.hasMore, isTrue);
+    expect(page.nextCursor, 'cursor-next');
+  });
+
   test('byId resolves through the independent detail endpoint', () async {
     final requestedPaths = <String>[];
     final client = ContentApiClient(
@@ -122,7 +151,7 @@ void main() {
             404,
           );
         }
-        return _ok({'sections': []});
+        return _ok({'sections': const <Map<String, dynamic>>[]});
       }),
     );
     final repository = RemoteSeriesRepository(client);

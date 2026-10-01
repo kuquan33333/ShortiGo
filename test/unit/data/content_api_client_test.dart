@@ -25,8 +25,20 @@ void main() {
           jsonEncode({
             'success': true,
             'data': {
-              'apiVersion': 1,
+              'apiVersion': 2,
               'language': 'vi',
+              'capabilities': {
+                'home': true,
+                'collections': true,
+                'cursorPagination': true,
+                'sorting': true,
+                'search': true,
+                'searchPagination': true,
+                'suggest': true,
+                'book': true,
+                'chapters': true,
+                'watch': true,
+              },
               'providers': [
                 {'id': 'reelshort', 'name': 'ReelShort VI'},
               ],
@@ -38,10 +50,86 @@ void main() {
     );
 
     final status = await client.checkConnection();
-    expect(status.apiVersion, 1);
+    expect(status.apiVersion, 2);
     expect(status.language, 'vi');
     expect(status.providers.single.name, 'ReelShort VI');
     expect(status.providers.single.available, isTrue);
+  });
+
+  test('rejects an API without v2 capabilities', () async {
+    final client = ContentApiClient(
+      defaultBaseUrl: 'https://example.vercel.app',
+      httpClient: MockClient((_) async => http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                'apiVersion': 1,
+                'providers': const <Map<String, dynamic>>[],
+              },
+            }),
+            200,
+          )),
+    );
+    await expectLater(
+      client.checkConnection(),
+      throwsA(isA<ContentApiException>().having(
+        (error) => error.code,
+        'code',
+        'api-incompatible',
+      )),
+    );
+  });
+
+  test('parses collection and search pages without decoding cursor', () async {
+    final client = ContentApiClient(
+      defaultBaseUrl: 'https://example.vercel.app',
+      httpClient: MockClient((request) async {
+        if (request.url.path.startsWith('/api/collection/')) {
+          expect(request.url.queryParameters['cursor'], 'opaque-v3');
+          expect(request.url.queryParameters['sort'], 'new');
+          return http.Response(
+            jsonEncode({
+              'success': true,
+              'data': {
+                'slug': 'romance',
+                'title': 'Romance',
+                'page': 2,
+                'pageSize': 30,
+                'list': const <dynamic>[],
+                'hasMore': false,
+                'nextCursor': null,
+              },
+            }),
+            200,
+          );
+        }
+        return http.Response(
+          jsonEncode({
+            'success': true,
+            'data': {
+              'page': 2,
+              'pageSize': 30,
+              'list': const <dynamic>[],
+              'hasMore': true,
+              'nextCursor': 'search-cursor',
+            },
+          }),
+          200,
+        );
+      }),
+    );
+
+    final collection = await client.getCollection(
+      slug: 'romance',
+      page: 2,
+      sort: 'new',
+      cursor: 'opaque-v3',
+    );
+    final search = await client.searchPage('query', page: 2);
+    expect(collection.page, 2);
+    expect(collection.nextCursor, isNull);
+    expect(search.page, 2);
+    expect(search.nextCursor, 'search-cursor');
   });
 
   test('rejects malformed JSON and locked watch responses', () async {

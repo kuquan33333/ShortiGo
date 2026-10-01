@@ -167,4 +167,9 @@
   ,"accountSignInRequired": "Vui lòng đăng nhập lại để tiếp tục."
   ,"accountRecentLoginRequired": "Vì lý do bảo mật, hãy đăng nhập lại trước khi xóa tài khoản."
   ,"accountDeletionFailed": "Không thể xóa tài khoản. Vui lòng thử lại."
+  ,"viewAll": "Xem thêm"
+  ,"loadMore": "Tải thêm"
+  ,"sortHot": "Hot nhất"
+  ,"sortNew": "Mới nhất"
+  ,"apiIncompatibleError": "API nội dung không tương thích. Vui lòng cập nhật máy chủ."
 }

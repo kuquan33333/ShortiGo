@@ -26,7 +26,19 @@ Response _statusResponse() => Response(
       jsonEncode({
         'success': true,
         'data': {
-          'apiVersion': 1,
+          'apiVersion': 2,
+          'capabilities': {
+            'home': true,
+            'collections': true,
+            'cursorPagination': true,
+            'sorting': true,
+            'search': true,
+            'searchPagination': true,
+            'suggest': true,
+            'book': true,
+            'chapters': true,
+            'watch': true,
+          },
           'providers': [
             {'id': 'reelshort', 'name': 'ReelShort', 'ok': true},
           ],

@@ -539,4 +539,20 @@ class AppLocalizationsEn extends AppLocalizations {
   @override
   String get accountDeletionFailed =>
       'Account deletion failed. Please try again.';
+
+  @override
+  String get viewAll => 'View all';
+
+  @override
+  String get loadMore => 'Load more';
+
+  @override
+  String get sortHot => 'Hot';
+
+  @override
+  String get sortNew => 'Newest';
+
+  @override
+  String get apiIncompatibleError =>
+      'This content API is incompatible. Please update the server.';
 }

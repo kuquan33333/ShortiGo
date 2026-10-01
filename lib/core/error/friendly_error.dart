@@ -29,10 +29,12 @@ FriendlyError localizedFriendlyErrorFor(
       'malformed-json' => l10n.malformedJsonError,
       'invalid-schema' => l10n.invalidSchemaError,
       'invalid-source-status' => l10n.invalidSchemaError,
+      'api-incompatible' => l10n.apiIncompatibleError,
       'not-found' => l10n.notFoundError,
       'http-404' => l10n.notFoundError,
       'source-locked' => l10n.sourceLockedError,
       'http-403' => l10n.sourceLockedError,
+      'http-502' || 'http-504' => l10n.contentServerUnavailable,
       _ => l10n.genericContentApiError,
     };
     return FriendlyError(

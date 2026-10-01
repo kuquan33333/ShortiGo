@@ -12,9 +12,7 @@ class RemoteEpisodeRepository implements EpisodeRepository {
 
   @override
   Future<List<Episode>> bySeriesId(String seriesId) async {
-    final data = await _client.getData(
-      '/api/chapters/${Uri.encodeComponent(seriesId)}',
-    );
+    final data = await _client.getChapters(seriesId);
     final raw = data['chapterList'] ?? data['chapters'] ?? const <dynamic>[];
     if (raw is! List) return const [];
     final episodes = <Episode>[];

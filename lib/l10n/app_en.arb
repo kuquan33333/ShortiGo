@@ -167,4 +167,9 @@
   ,"accountSignInRequired": "Sign in again to continue."
   ,"accountRecentLoginRequired": "For your security, sign in again before deleting your account."
   ,"accountDeletionFailed": "Account deletion failed. Please try again."
+  ,"viewAll": "View all"
+  ,"loadMore": "Load more"
+  ,"sortHot": "Hot"
+  ,"sortNew": "Newest"
+  ,"apiIncompatibleError": "This content API is incompatible. Please update the server."
 }

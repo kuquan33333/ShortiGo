@@ -1,6 +1,5 @@
 import '../../domain/interfaces/video_source.dart';
 import 'content_api_client.dart';
-import 'content_api_mapper.dart';
 import 'content_api_models.dart';
 
 class RemoteVideoSource implements VideoSource {
@@ -23,16 +22,10 @@ class RemoteVideoSource implements VideoSource {
       );
     }
 
-    final data = await _client.getData(
-      '/api/watch/${Uri.encodeComponent(seriesId)}/$index',
-    );
     try {
-      return ContentApiMapper.watchUrl(data);
-    } on FormatException catch (error) {
-      throw ContentApiException(
-        code: 'invalid-watch-response',
-        cause: error,
-      );
+      return (await _client.getWatch(seriesId, index)).videoUrl;
+    } on ContentApiException {
+      rethrow;
     }
   }
 }

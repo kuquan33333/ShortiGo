@@ -6,6 +6,7 @@ import '../../app.dart';
 import '../../features/auth/presentation/login_page.dart';
 import '../../features/splash/presentation/splash_page.dart';
 import '../../features/discover/presentation/discover_page.dart';
+import '../../features/collection/presentation/collection_page.dart';
 import '../../features/episode_player/presentation/episode_player_page.dart';
 import '../../features/my_list/presentation/my_list_page.dart';
 import '../../features/onboarding/presentation/onboarding_page.dart';
@@ -60,6 +61,12 @@ GoRouter buildRouter({
           GoRoute(
             path: '/settings',
             builder: (_, __) => const SettingsPage(),
+          ),
+          GoRoute(
+            path: '/collection/:slug',
+            builder: (_, state) => CollectionPage(
+              slug: Uri.decodeComponent(state.pathParameters['slug']!),
+            ),
           ),
           GoRoute(
             path: '/series/:id',

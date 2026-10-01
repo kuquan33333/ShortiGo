@@ -1099,6 +1099,36 @@ abstract class AppLocalizations {
   /// In en, this message translates to:
   /// **'Account deletion failed. Please try again.'**
   String get accountDeletionFailed;
+
+  /// No description provided for @viewAll.
+  ///
+  /// In en, this message translates to:
+  /// **'View all'**
+  String get viewAll;
+
+  /// No description provided for @loadMore.
+  ///
+  /// In en, this message translates to:
+  /// **'Load more'**
+  String get loadMore;
+
+  /// No description provided for @sortHot.
+  ///
+  /// In en, this message translates to:
+  /// **'Hot'**
+  String get sortHot;
+
+  /// No description provided for @sortNew.
+  ///
+  /// In en, this message translates to:
+  /// **'Newest'**
+  String get sortNew;
+
+  /// No description provided for @apiIncompatibleError.
+  ///
+  /// In en, this message translates to:
+  /// **'This content API is incompatible. Please update the server.'**
+  String get apiIncompatibleError;
 }
 
 class _AppLocalizationsDelegate

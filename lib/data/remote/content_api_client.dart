@@ -63,10 +63,39 @@ class ContentApiClient {
       );
     }
     final data = await _getData('/api/source-status', baseUrl: normalized);
-    return ContentApiSourceStatus.fromJson(data);
+    final status = ContentApiSourceStatus.fromJson(data);
+    if (!status.isCompatible) {
+      throw const ContentApiException(code: 'api-incompatible');
+    }
+    return status;
   }
 
+  Future<ContentApiSourceStatus> getSourceStatus() => checkConnection();
+
   Future<Map<String, dynamic>> getData(String path) => _getData(path);
+
+  Future<ContentApiHomePayload> getHome() async {
+    return ContentApiHomePayload.fromJson(await _getData('/api/home'));
+  }
+
+  Future<ContentApiCollectionPage> getCollection({
+    required String slug,
+    int page = 1,
+    int pageSize = 30,
+    String sort = 'hot',
+    String? cursor,
+  }) async {
+    final query = <String, String>{
+      'pageSize': '$pageSize',
+      'sort': sort,
+      if (cursor != null && cursor.isNotEmpty) 'cursor': cursor,
+    };
+    final path = Uri(
+      path: '/api/collection/${Uri.encodeComponent(slug)}/$page',
+      queryParameters: query,
+    ).toString();
+    return ContentApiCollectionPage.fromJson(await _getData(path));
+  }
 
   Future<List<Map<String, dynamic>>> search(String keyword) async {
     final data = await _getData(
@@ -75,8 +104,34 @@ class ContentApiClient {
     return _listFrom(data, 'list');
   }
 
+  Future<ContentApiSearchPage> searchPage(
+    String keyword, {
+    int page = 1,
+    int pageSize = 30,
+  }) async {
+    final path = Uri(
+      path: '/api/search/${Uri.encodeComponent(keyword)}/$page',
+      queryParameters: {'pageSize': '$pageSize'},
+    ).toString();
+    return ContentApiSearchPage.fromJson(await _getData(path));
+  }
+
   Future<Map<String, dynamic>> getBook(String bookId) {
     return _getData('/api/book/${Uri.encodeComponent(bookId)}');
+  }
+
+  Future<Map<String, dynamic>> getChapters(String bookId) {
+    return _getData('/api/chapters/${Uri.encodeComponent(bookId)}');
+  }
+
+  Future<ContentApiPlayback> getWatch(
+    String bookId,
+    int chapterIndex,
+  ) async {
+    final data = await _getData(
+      '/api/watch/${Uri.encodeComponent(bookId)}/$chapterIndex',
+    );
+    return ContentApiPlayback.fromJson(data);
   }
 
   Future<List<String>> suggest(String keyword) async {

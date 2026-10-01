@@ -536,4 +536,20 @@ class AppLocalizationsVi extends AppLocalizations {
   @override
   String get accountDeletionFailed =>
       'Không thể xóa tài khoản. Vui lòng thử lại.';
+
+  @override
+  String get viewAll => 'Xem thêm';
+
+  @override
+  String get loadMore => 'Tải thêm';
+
+  @override
+  String get sortHot => 'Hot nhất';
+
+  @override
+  String get sortNew => 'Mới nhất';
+
+  @override
+  String get apiIncompatibleError =>
+      'API nội dung không tương thích. Vui lòng cập nhật máy chủ.';
 }

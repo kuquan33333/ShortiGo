@@ -5,7 +5,18 @@ import 'content_api_client.dart';
 import 'content_api_mapper.dart';
 import 'content_api_models.dart';
 
-class RemoteSeriesRepository implements SeriesRepository {
+abstract class PagedSeriesRepository {
+  Future<RemoteSeriesPage> collectionPage({
+    required String slug,
+    int page = 1,
+    String? cursor,
+    String sort = 'hot',
+    int pageSize = 30,
+  });
+}
+
+class RemoteSeriesRepository
+    implements SeriesRepository, PagedSeriesRepository {
   RemoteSeriesRepository(this._client);
 
   final ContentApiClient _client;
@@ -20,41 +31,56 @@ class RemoteSeriesRepository implements SeriesRepository {
   }
 
   Future<RemoteHomeCatalog> homeCatalog() async {
-    final data = await _client.getData('/api/home');
-    final hero = _mapOne(data['hero']);
-    final heroes = data['heroes'] is List
-        ? (data['heroes'] as List)
-            .whereType<Map<String, dynamic>>()
-            .map((item) => _mapOne(item))
-            .whereType<Series>()
-            .toList()
-        : <Series>[];
-    final sections = data['sections'] is List
-        ? (data['sections'] as List)
-            .whereType<Map<String, dynamic>>()
-            .map((section) {
-              final map = Map<String, dynamic>.from(section);
-              final raw = map['list'];
-              final items = raw is List
-                  ? raw
-                      .whereType<Map>()
-                      .map((item) => _mapOne(item))
-                      .whereType<Series>()
-                      .toList()
-                  : <Series>[];
-              return RemoteHomeSection(
-                slug: map['slug']?.toString() ?? '',
-                title: map['title']?.toString() ?? '',
-                series: items,
-              );
-            })
-            .where((section) => section.series.isNotEmpty)
-            .toList()
-        : <RemoteHomeSection>[];
+    final data = await _client.getHome();
+    final hero = _mapOne(data.hero);
+    final heroes =
+        data.heroes.map((item) => _mapOne(item)).whereType<Series>().toList();
+    final sections = data.sections
+        .map((section) {
+          final items = section.items
+              .map((item) => _mapOne(item))
+              .whereType<Series>()
+              .toList();
+          return RemoteHomeSection(
+            slug: section.slug,
+            title: section.title,
+            series: items,
+          );
+        })
+        .where((section) => section.series.isNotEmpty)
+        .toList();
     return RemoteHomeCatalog(
       hero: hero,
       heroes: heroes,
       sections: sections,
+    );
+  }
+
+  @override
+  Future<RemoteSeriesPage> collectionPage({
+    required String slug,
+    int page = 1,
+    String? cursor,
+    String sort = 'hot',
+    int pageSize = 30,
+  }) async {
+    final response = await _client.getCollection(
+      slug: slug,
+      page: page,
+      pageSize: pageSize,
+      sort: sort,
+      cursor: cursor,
+    );
+    final items = _mapUnique(
+      response.items,
+      category: _categoryForSlug(slug),
+    );
+    return RemoteSeriesPage(
+      title: response.title.isEmpty ? slug : response.title,
+      page: response.page,
+      items: items,
+      hasMore: response.hasMore,
+      nextCursor: response.nextCursor,
     );
   }
 
@@ -222,6 +248,37 @@ class RemoteSeriesRepository implements SeriesRepository {
     }
     return const [];
   }
+
+  Category _categoryForSlug(String slug) {
+    return switch (slug.trim().toLowerCase()) {
+      'new' => Category.newReleases,
+      'trending' || 'hot' => Category.hot,
+      'romance' => Category.romance,
+      'ceo' => Category.ceo,
+      'revenge' => Category.revenge,
+      'family' => Category.family,
+      'action' => Category.action,
+      'fantasy' => Category.fantasy,
+      'recommended' || 'for-you' || 'foryou' => Category.recommended,
+      _ => Category.forYou,
+    };
+  }
+}
+
+class RemoteSeriesPage {
+  const RemoteSeriesPage({
+    required this.title,
+    required this.page,
+    required this.items,
+    required this.hasMore,
+    this.nextCursor,
+  });
+
+  final String title;
+  final int page;
+  final List<Series> items;
+  final bool hasMore;
+  final String? nextCursor;
 }
 
 class RemoteHomeCatalog {

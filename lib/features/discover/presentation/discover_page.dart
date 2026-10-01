@@ -97,10 +97,22 @@ class DiscoverPage extends ConsumerWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
-          child: Text(
-            localizedSectionTitle(l10n, section.slug, section.title),
-            style: Theme.of(context).textTheme.titleMedium,
+          padding: const EdgeInsets.fromLTRB(16, 8, 8, 8),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  localizedSectionTitle(l10n, section.slug, section.title),
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              if (section.slug.trim().isNotEmpty)
+                TextButton(
+                  onPressed: () => context
+                      .push('/collection/${Uri.encodeComponent(section.slug)}'),
+                  child: Text(l10n.viewAll),
+                ),
+            ],
           ),
         ),
         SizedBox(
