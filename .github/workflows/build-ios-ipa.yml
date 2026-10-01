@@ -1,0 +1,71 @@
+name: Build iOS IPA
+
+on:
+  workflow_dispatch:
+    inputs:
+      ref:
+        description: Git ref to build
+        required: true
+        default: feat/content-api-guest-vi
+        type: string
+      content_api_base_url:
+        description: Content API base URL (for example, the production API URL)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-ios-ipa-${{ inputs.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Build unsigned IPA
+    runs-on: macos-latest
+    env:
+      CONTENT_API_BASE_URL: ${{ inputs.content_api_base_url }}
+
+    steps:
+      - name: Checkout requested ref
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.ref }}
+          fetch-depth: 1
+
+      - name: Validate Content API URL
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ -z "${CONTENT_API_BASE_URL}" ]]; then
+            echo "content_api_base_url is required; no production URL is configured in this workflow."
+            exit 1
+          fi
+          if [[ ! "${CONTENT_API_BASE_URL}" =~ ^https?:// ]]; then
+            echo "content_api_base_url must start with http:// or https://"
+            exit 1
+          fi
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Build unsigned IPA
+        run: >-
+          flutter build ipa
+          --release
+          --no-codesign
+          "--dart-define=CONTENT_API_BASE_URL=${CONTENT_API_BASE_URL}"
+
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: shortigo-ipa-${{ inputs.ref }}-${{ github.run_number }}
+          path: build/ios/ipa/*.ipa
+          if-no-files-found: error
