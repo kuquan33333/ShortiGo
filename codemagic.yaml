@@ -25,6 +25,17 @@ workflows:
           flutter build ipa --release --no-codesign \
             --dart-define=VIP_TEST_MODE=true \
             --dart-define=CONTENT_API_BASE_URL=
-          test -n "$(find build/ios/ipa -maxdepth 1 -name '*.ipa' -print -quit)"
+          archive_app="$(find build/ios/archive -type d \
+            -path '*/Products/Applications/*.app' -print -quit)"
+          test -n "${archive_app}"
+          rm -rf build/ios/ipa
+          mkdir -p build/ios/ipa/Payload
+          cp -R "${archive_app}" build/ios/ipa/Payload/Runner.app
+          (
+            cd build/ios/ipa
+            zip -qry ShortiGo-Test.ipa Payload
+          )
+          test -f build/ios/ipa/ShortiGo-Test.ipa
+          unzip -l build/ios/ipa/ShortiGo-Test.ipa | grep -q 'Payload/Runner.app/'
     artifacts:
       - build/ios/ipa/*.ipa

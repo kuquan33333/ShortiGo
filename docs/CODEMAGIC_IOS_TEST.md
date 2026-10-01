@@ -11,10 +11,13 @@ from production signing and does not deploy or merge anything.
 - Configuration: `/codemagic.yaml`
 - Trigger: manual only; choose the branch above in Codemagic when starting a
   build.
-- Artifact: `build/ios/ipa/*.ipa`
+- Artifact: `build/ios/ipa/ShortiGo-Test.ipa`
 
 The workflow runs Flutter dependency installation, analysis, tests, and an
-unsigned IPA build. It has no iOS signing configuration and does not use
+unsigned archive build. Because Flutter skips IPA export when `--no-codesign`
+is used, the workflow packages the archived `Runner.app` into
+`Payload/ShortiGo-Test.ipa` for artifact delivery. It has no iOS signing
+configuration and does not use
 TestFlight or an Apple distribution certificate.
 
 The workflow explicitly disables Flutter Swift Package Manager for this build.
