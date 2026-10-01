@@ -36,6 +36,6 @@ workflows:
             zip -qry ShortiGo-Test.ipa Payload
           )
           test -f build/ios/ipa/ShortiGo-Test.ipa
-          unzip -l build/ios/ipa/ShortiGo-Test.ipa | grep -q 'Payload/Runner.app/'
+          unzip -l build/ios/ipa/ShortiGo-Test.ipa | grep 'Payload/Runner.app/' > /dev/null
     artifacts:
       - build/ios/ipa/*.ipa
