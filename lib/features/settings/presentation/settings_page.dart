@@ -102,6 +102,7 @@ class _SettingsPageState extends ConsumerState<SettingsPage> {
 
   void _invalidateContent() {
     ref.read(contentApiClientProvider).invalidate();
+    ref.read(contentApiRevisionProvider.notifier).state++;
     ref.invalidate(contentApiClientProvider);
     ref.invalidate(seriesRepositoryProvider);
     ref.invalidate(episodeRepositoryProvider);

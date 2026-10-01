@@ -81,6 +81,10 @@ final contentApiClientProvider = Provider<ContentApiClient>((ref) {
   );
 });
 
+/// Bumped after a runtime Content API source change so local screen state
+/// (search and collection pagination) cannot keep presenting the old source.
+final contentApiRevisionProvider = StateProvider<int>((_) => 0);
+
 final seriesRepositoryProvider = Provider<SeriesRepository>((ref) {
   return RemoteSeriesRepository(ref.watch(contentApiClientProvider));
 });

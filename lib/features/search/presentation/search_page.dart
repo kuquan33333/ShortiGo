@@ -25,6 +25,7 @@ class _SearchPageState extends ConsumerState<SearchPage> {
   final _controller = TextEditingController();
   Timer? _debounce;
   int _requestGeneration = 0;
+  int? _contentRevision;
   List<Series> _results = const [];
   List<String> _suggestions = const [];
   String _lastQuery = '';
@@ -119,6 +120,24 @@ class _SearchPageState extends ConsumerState<SearchPage> {
     }
   }
 
+  void _resetForSourceChange() {
+    _debounce?.cancel();
+    final query = _controller.text.trim();
+    final generation = ++_requestGeneration;
+    if (!mounted) return;
+    setState(() {
+      _results = const [];
+      _suggestions = const [];
+      _page = 0;
+      _hasMore = false;
+      _loadingMore = false;
+      _loadMoreError = null;
+      _error = null;
+      _loading = query.isNotEmpty;
+    });
+    if (query.isNotEmpty) unawaited(_search(query, generation));
+  }
+
   Future<void> _loadMore() async {
     if (_loading || _loadingMore || !_hasMore || _lastQuery.isEmpty) return;
     final generation = _requestGeneration;
@@ -171,6 +190,15 @@ class _SearchPageState extends ConsumerState<SearchPage> {
 
   @override
   Widget build(BuildContext context) {
+    final revision = ref.watch(contentApiRevisionProvider);
+    if (_contentRevision == null) {
+      _contentRevision = revision;
+    } else if (_contentRevision != revision) {
+      _contentRevision = revision;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) _resetForSourceChange();
+      });
+    }
     final l10n = AppLocalizations.of(context)!;
     return Scaffold(
       appBar: AppBar(

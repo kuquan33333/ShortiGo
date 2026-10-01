@@ -132,6 +132,30 @@ void main() {
     expect(search.nextCursor, 'search-cursor');
   });
 
+  test('runtime source override switches requests and restores the default',
+      () async {
+    final requestedRoots = <String>[];
+    final client = ContentApiClient(
+      defaultBaseUrl: 'https://server-a.example.com',
+      httpClient: MockClient((request) async {
+        requestedRoots.add(request.url.origin);
+        return _sourceStatusResponse();
+      }),
+    );
+
+    await client.checkConnection(baseUrl: 'https://server-a.example.com');
+    await client.saveBaseUrl('https://server-b.example.com/');
+    await client.getData('/api/home');
+    await client.clearSavedBaseUrl();
+    await client.getData('/api/home');
+
+    expect(requestedRoots, [
+      'https://server-a.example.com',
+      'https://server-b.example.com',
+      'https://server-a.example.com',
+    ]);
+  });
+
   test('rejects malformed JSON and locked watch responses', () async {
     final malformed = ContentApiClient(
       defaultBaseUrl: 'https://example.vercel.app',
@@ -156,3 +180,26 @@ void main() {
     );
   });
 }
+
+http.Response _sourceStatusResponse() => http.Response(
+      jsonEncode({
+        'success': true,
+        'data': {
+          'apiVersion': 2,
+          'providers': const <Map<String, dynamic>>[],
+          'capabilities': {
+            'home': true,
+            'collections': true,
+            'cursorPagination': true,
+            'sorting': true,
+            'search': true,
+            'searchPagination': true,
+            'suggest': true,
+            'book': true,
+            'chapters': true,
+            'watch': true,
+          },
+        },
+      }),
+      200,
+    );

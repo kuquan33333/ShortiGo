@@ -34,6 +34,7 @@ class _CollectionPageState extends ConsumerState<CollectionPage> {
   bool _loadingMore = false;
   Object? _error;
   Object? _loadMoreError;
+  int? _contentRevision;
 
   @override
   void initState() {
@@ -137,6 +138,26 @@ class _CollectionPageState extends ConsumerState<CollectionPage> {
 
   @override
   Widget build(BuildContext context) {
+    final revision = ref.watch(contentApiRevisionProvider);
+    if (_contentRevision == null) {
+      _contentRevision = revision;
+    } else if (_contentRevision != revision) {
+      _contentRevision = revision;
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        setState(() {
+          _items = const [];
+          _title = '';
+          _page = 0;
+          _nextCursor = null;
+          _hasMore = true;
+          _error = null;
+          _loadMoreError = null;
+          _initialLoading = false;
+        });
+        unawaited(_loadInitial());
+      });
+    }
     final l10n = AppLocalizations.of(context)!;
     final title = _title.isEmpty ? widget.slug : _title;
     return Scaffold(
