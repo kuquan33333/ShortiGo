@@ -11,6 +11,10 @@ workflows:
         script: flutter config --no-enable-swift-package-manager
       - name: Install Flutter dependencies
         script: flutter pub get
+      - name: Refresh RevenueCat CocoaPods dependency
+        script: |
+          cd ios
+          pod update PurchasesHybridCommon --repo-update
       - name: Static analysis
         script: flutter analyze --no-fatal-infos
       - name: Unit and widget tests

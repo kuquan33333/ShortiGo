@@ -22,6 +22,12 @@ The current `google_mobile_ads` and `better_player_plus` versions use
 CocoaPods, so this keeps the build dependency mode consistent without changing
 the app's dependency versions or native project files.
 
+The workflow also refreshes the RevenueCat transitive pod
+`PurchasesHybridCommon` before the IPA build. This is required because the
+checked-in CocoaPods lock can lag behind the resolved `purchases_flutter`
+plugin version; the update is performed only on the disposable Codemagic
+runner.
+
 ## Test build flags
 
 The build command passes:
