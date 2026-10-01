@@ -7,6 +7,7 @@ import 'package:shortigo/data/remote/content_api_client.dart';
 import 'package:shortigo/data/remote/content_api_mapper.dart';
 import 'package:shortigo/data/remote/content_api_models.dart';
 import 'package:shortigo/data/remote/remote_series_repository.dart';
+import 'package:shortigo/domain/entities/category.dart';
 
 Map<String, dynamic> _book(String id) => {
       'bookId': id,
@@ -50,6 +51,28 @@ void main() {
     expect(page.items.single.id, 'collection-2');
     expect(page.hasMore, isTrue);
     expect(page.nextCursor, 'cursor-next');
+  });
+
+  test('hot and ranking use separate server sources', () async {
+    final requestedPaths = <String>[];
+    final client = ContentApiClient(
+      defaultBaseUrl: 'https://example.com',
+      httpClient: MockClient((request) async {
+        requestedPaths.add(request.url.path);
+        return _ok({
+          'list': [_book(request.url.path)]
+        });
+      }),
+    );
+    final repository = RemoteSeriesRepository(client);
+
+    await repository.byCategory(Category.hot);
+    await repository.ranked();
+
+    expect(requestedPaths, [
+      '/api/collection/trending/1',
+      '/api/rank/1/1',
+    ]);
   });
 
   test('byId resolves through the independent detail endpoint', () async {

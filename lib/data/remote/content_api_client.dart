@@ -78,6 +78,12 @@ class ContentApiClient {
     return ContentApiHomePayload.fromJson(await _getData('/api/home'));
   }
 
+  Future<Map<String, dynamic>> getRanking({String type = '1', int page = 1}) {
+    final path =
+        '/api/rank/${Uri.encodeComponent(type)}/${page.clamp(1, 999999)}';
+    return _getData(path);
+  }
+
   Future<ContentApiCollectionPage> getCollection({
     required String slug,
     int page = 1,

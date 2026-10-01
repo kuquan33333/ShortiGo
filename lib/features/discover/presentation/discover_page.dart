@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/error/friendly_error.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../domain/entities/category.dart';
+import '../../../domain/entities/series.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/loading_view.dart';
@@ -22,20 +23,6 @@ class DiscoverPage extends ConsumerStatefulWidget {
 }
 
 class _DiscoverPageState extends ConsumerState<DiscoverPage> {
-  int _tab = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (mounted) unawaited(_select(Category.hot));
-    });
-  }
-
-  Future<void> _select(Category category) async {
-    await ref.read(discoverNotifierProvider.notifier).selectCategory(category);
-  }
-
   @override
   Widget build(BuildContext context) {
     final async = ref.watch(discoverNotifierProvider);
@@ -52,12 +39,14 @@ class _DiscoverPageState extends ConsumerState<DiscoverPage> {
               onGift: () => context.push('/rewards'),
             ),
             _HomeTabs(
-              selected: _tab,
+              selected: async.valueOrNull?.selectedTab.index ?? 0,
               labels: [l10n.hotTab, l10n.newTab, l10n.ranking, l10n.categories],
               onSelected: (index) {
-                setState(() => _tab = index);
-                if (index == 1) unawaited(_select(Category.newReleases));
-                if (index == 2) unawaited(_select(Category.hot));
+                unawaited(
+                  ref.read(discoverNotifierProvider.notifier).selectTab(
+                        DiscoverHomeTab.values[index],
+                      ),
+                );
               },
             ),
             Expanded(
@@ -77,20 +66,28 @@ class _DiscoverPageState extends ConsumerState<DiscoverPage> {
   }
 
   Widget _content(BuildContext context, DiscoverState state) {
-    if (_tab == 3) {
-      return _Categories(
-        current: state.currentCategory,
-        onSelected: (category) => unawaited(_select(category)),
-      );
-    }
-    if (state.series.isEmpty && state.sections.isNotEmpty) {
-      return ListView(
-        padding: const EdgeInsets.only(bottom: 24),
+    if (state.selectedTab == DiscoverHomeTab.categories) {
+      return Column(
         children: [
-          for (final section in state.sections) _section(context, section)
+          SizedBox(
+            height: 200,
+            child: _Categories(
+              current: state.currentCategory,
+              onSelected: (category) => unawaited(
+                ref.read(discoverNotifierProvider.notifier).selectCategory(
+                      category,
+                    ),
+              ),
+            ),
+          ),
+          Expanded(child: _grid(context, state.series)),
         ],
       );
     }
+    return _grid(context, state.series);
+  }
+
+  Widget _grid(BuildContext context, List<Series> series) {
     return GridView.builder(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
@@ -99,55 +96,14 @@ class _DiscoverPageState extends ConsumerState<DiscoverPage> {
         crossAxisSpacing: 10,
         childAspectRatio: .49,
       ),
-      itemCount: state.series.length,
+      itemCount: series.length,
       itemBuilder: (_, index) {
-        final series = state.series[index];
+        final item = series[index];
         return SeriesCard(
-          series: series,
-          onTap: () => context.push('/watch/${series.id}'),
+          series: item,
+          onTap: () => context.push('/watch/${item.id}'),
         );
       },
-    );
-  }
-
-  Widget _section(BuildContext context, DiscoverSection section) {
-    final l10n = AppLocalizations.of(context)!;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Padding(
-          padding: const EdgeInsets.fromLTRB(16, 12, 8, 8),
-          child: Row(
-            children: [
-              Expanded(
-                  child: Text(section.title,
-                      style: Theme.of(context).textTheme.titleMedium)),
-              if (section.slug.trim().isNotEmpty)
-                TextButton(
-                  onPressed: () => context
-                      .push('/collection/${Uri.encodeComponent(section.slug)}'),
-                  child: Text(l10n.viewAll),
-                ),
-            ],
-          ),
-        ),
-        SizedBox(
-          height: 246,
-          child: ListView.separated(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            itemCount: section.series.length,
-            separatorBuilder: (_, __) => const SizedBox(width: 10),
-            itemBuilder: (_, index) => SizedBox(
-              width: 124,
-              child: SeriesCard(
-                series: section.series[index],
-                onTap: () => context.push('/watch/${section.series[index].id}'),
-              ),
-            ),
-          ),
-        ),
-      ],
     );
   }
 }

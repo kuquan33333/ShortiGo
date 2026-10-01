@@ -138,7 +138,7 @@ class RemoteSeriesRepository
     final path = switch (category) {
       Category.forYou => '/api/home',
       Category.newReleases => '/api/new/1',
-      Category.hot => '/api/rank/1',
+      Category.hot => '/api/collection/trending/1',
       Category.romance => '/api/collection/romance/1',
       Category.ceo => '/api/collection/ceo/1',
       Category.revenge => '/api/collection/revenge/1',
@@ -158,6 +158,15 @@ class RemoteSeriesRepository
     final list = _listFromPayload(data);
     final mapped = _mapUnique(list, category: category);
     return mapped.take(limit).toList();
+  }
+
+  /// Ranking is intentionally separate from [Category.hot]. Hot is the
+  /// trending shelf, while ranking is backed by the server rank contract.
+  Future<List<Series>> ranked({int limit = 20, String type = '1'}) async {
+    final data = await _client.getRanking(type: type, page: 1);
+    return _mapUnique(_listFromPayload(data), category: Category.hot)
+        .take(limit)
+        .toList();
   }
 
   @override

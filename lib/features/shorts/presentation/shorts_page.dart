@@ -11,6 +11,7 @@ import '../../../core/error/friendly_error.dart';
 import '../../../core/async/retryable_future_cache.dart';
 import '../../../core/providers.dart';
 import '../../../domain/entities/episode.dart';
+import '../../../domain/entities/series.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/loading_view.dart';
@@ -22,6 +23,7 @@ import 'shorts_action_rail.dart';
 import 'shorts_info_panel.dart';
 import 'shorts_video_progress_bar.dart';
 import 'video_card.dart';
+import '../../series_detail/presentation/series_detail_page.dart';
 
 class ShortsPage extends ConsumerStatefulWidget {
   const ShortsPage({super.key});
@@ -271,7 +273,8 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
                     key: ValueKey('shorts_info_${series.id}'),
                     series: series,
                     episode: activeEpisode,
-                    onTitle: () => context.push('/series/${series.id}'),
+                    onTitle: () =>
+                        unawaited(_showDetailSheet(series, activeEpisode.id)),
                     onWatchAll: () {
                       unawaited(_safePause());
                       context.push(
@@ -308,6 +311,28 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
     });
     _prefetchUrls(episodes);
     unawaited(_playEpisodeAt(index, episodes));
+  }
+
+  Future<void> _showDetailSheet(Series series, String currentEpisodeId) async {
+    try {
+      final episodes =
+          await ref.read(episodeRepositoryProvider).bySeriesId(series.id);
+      if (!mounted) return;
+      await showSeriesDetailSheet(
+        context,
+        series: series,
+        episodes: episodes,
+        currentIndex:
+            episodes.indexWhere((episode) => episode.id == currentEpisodeId),
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(localizedFriendlyErrorFor(context, error).message),
+        ),
+      );
+    }
   }
 
   Future<void> _playEpisodeAt(int index, List<Episode> episodes) async {

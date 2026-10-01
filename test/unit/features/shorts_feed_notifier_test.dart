@@ -9,6 +9,22 @@ import 'package:shortigo/domain/interfaces/series_repository.dart';
 import 'package:shortigo/features/shorts/application/shorts_feed_notifier.dart';
 
 void main() {
+  test('candidate pool interleaves for-you, hot and recommended shelves', () {
+    final groups = [
+      List.generate(3, (index) => _series('for_you_$index')),
+      List.generate(3, (index) => _series('hot_$index')),
+      List.generate(3, (index) => _series('recommended_$index')),
+    ];
+
+    final candidates = interleaveSeriesGroups(groups, limit: 9);
+
+    expect(
+      candidates.take(3).map((series) => series.id),
+      ['for_you_0', 'hot_0', 'recommended_0'],
+    );
+    expect(candidates.map((series) => series.id).toSet(), hasLength(9));
+  });
+
   test('shorts feed selects one first playable episode per series', () async {
     final container = ProviderContainer(
       overrides: [
@@ -54,6 +70,41 @@ void main() {
         isNot(contains('s1_locked')));
     expect(state.episodes.map((episode) => episode.id),
         isNot(contains('s1_unavailable')));
+  });
+
+  test(
+      'shorts feed keeps at least fifteen unique series from twenty candidates',
+      () async {
+    final series = List.generate(20, (index) => _series('series_$index'));
+    final episodes = <String, List<Episode>>{
+      for (var index = 0; index < series.length; index++)
+        series[index].id: [
+          _episode('locked_$index', series[index].id, 1, sourceLocked: true),
+          _episode('unavailable_$index', series[index].id, 2,
+              sourceAvailable: false),
+          _episode('playable_$index', series[index].id, 3),
+          _episode('later_$index', series[index].id, 4),
+        ],
+    };
+    final container = ProviderContainer(
+      overrides: [
+        currentAppUserDocProvider.overrideWith((_) => Stream.value(null)),
+        seriesRepositoryProvider.overrideWithValue(
+          _FakeSeriesRepository(series),
+        ),
+        episodeRepositoryProvider.overrideWithValue(
+          _FakeEpisodeRepository(episodes),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final state = await container.read(shortsFeedNotifierProvider.future);
+
+    expect(state.episodes.length, greaterThanOrEqualTo(15));
+    expect(state.episodes.map((episode) => episode.seriesId).toSet(),
+        hasLength(state.episodes.length));
+    expect(state.episodes.every((episode) => episode.order == 3), isTrue);
   });
 }
 

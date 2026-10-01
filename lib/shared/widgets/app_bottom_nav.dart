@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../l10n/app_localizations.dart';
 
 class AppBottomNav extends StatelessWidget {
@@ -55,17 +56,88 @@ class AppBottomNav extends StatelessWidget {
     final index = _currentIndex(context);
     final l10n = AppLocalizations.of(context)!;
     final tabs = _tabs.map((factory) => factory(l10n)).toList();
-    return BottomNavigationBar(
-      currentIndex: index,
-      onTap: (index) => context.go(tabs[index].route),
-      items: [
-        for (final tab in tabs)
-          BottomNavigationBarItem(
-            icon: Icon(tab.icon),
-            activeIcon: Icon(tab.selected),
-            label: tab.label,
+    return Material(
+      color: Colors.black,
+      child: SafeArea(
+        top: false,
+        minimum: const EdgeInsets.only(top: 4),
+        child: SizedBox(
+          height: 60,
+          child: Row(
+            children: [
+              for (var tabIndex = 0; tabIndex < tabs.length; tabIndex++)
+                Expanded(
+                  child: _NavItem(
+                    tab: tabs[tabIndex],
+                    selected: tabIndex == index,
+                    onTap: () => context.go(tabs[tabIndex].route),
+                  ),
+                ),
+            ],
           ),
-      ],
+        ),
+      ),
+    );
+  }
+}
+
+class _NavItem extends StatelessWidget {
+  const _NavItem({
+    required this.tab,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final _TabSpec tab;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final color = selected ? AppColors.textPrimary : AppColors.textSecondary;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: tab.label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 3),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 180),
+                width: selected ? 42 : 36,
+                height: 30,
+                decoration: BoxDecoration(
+                  color: selected
+                      ? AppColors.primary.withValues(alpha: .18)
+                      : Colors.transparent,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Icon(
+                  selected ? tab.selected : tab.icon,
+                  color: color,
+                  size: 23,
+                ),
+              ),
+              const SizedBox(height: 1),
+              Text(
+                tab.label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: color,
+                  fontSize: 10,
+                  fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }

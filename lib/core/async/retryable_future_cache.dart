@@ -18,5 +18,12 @@ class RetryableFutureCache<K, V> {
     return future;
   }
 
+  void retainOnly(Iterable<K> keys) {
+    final keep = keys.toSet();
+    _values.removeWhere((key, _) => !keep.contains(key));
+  }
+
+  void remove(K key) => _values.remove(key);
+
   void clear() => _values.clear();
 }

@@ -46,24 +46,81 @@ class SeriesDetailPage extends ConsumerWidget {
             return Center(
                 child: Text(AppLocalizations.of(context)!.seriesNotFound));
           }
-          return _SeriesDetailContent(series: series, episodes: state.episodes);
+          return SeriesDetailContent(series: series, episodes: state.episodes);
         },
       ),
     );
   }
 }
 
-class _SeriesDetailContent extends StatelessWidget {
-  const _SeriesDetailContent({required this.series, required this.episodes});
+Future<int?> showSeriesDetailSheet(
+  BuildContext context, {
+  required Series series,
+  required List<Episode> episodes,
+  int initialTab = 0,
+  int currentIndex = -1,
+}) {
+  return showModalBottomSheet<int>(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: AppColors.surface,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+    ),
+    builder: (sheetContext) => SafeArea(
+      child: SizedBox(
+        height: MediaQuery.sizeOf(sheetContext).height * .82,
+        child: Column(
+          children: [
+            const SizedBox(height: 12),
+            Container(
+              width: 38,
+              height: 4,
+              decoration: BoxDecoration(
+                color: Colors.white24,
+                borderRadius: BorderRadius.circular(4),
+              ),
+            ),
+            const SizedBox(height: 4),
+            Expanded(
+              child: SeriesDetailContent(
+                series: series,
+                episodes: episodes,
+                initialTab: initialTab,
+                currentIndex: currentIndex,
+                onEpisodeSelected: (index) =>
+                    Navigator.of(sheetContext).pop(index),
+              ),
+            ),
+          ],
+        ),
+      ),
+    ),
+  );
+}
+
+class SeriesDetailContent extends StatelessWidget {
+  const SeriesDetailContent({
+    super.key,
+    required this.series,
+    required this.episodes,
+    this.initialTab = 0,
+    this.currentIndex = -1,
+    this.onEpisodeSelected,
+  });
 
   final Series series;
   final List<Episode> episodes;
+  final int initialTab;
+  final int currentIndex;
+  final ValueChanged<int>? onEpisodeSelected;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return DefaultTabController(
       length: 2,
+      initialIndex: initialTab.clamp(0, 1),
       child: CustomScrollView(
         slivers: [
           SliverToBoxAdapter(
@@ -85,11 +142,13 @@ class _SeriesDetailContent extends StatelessWidget {
                   padding: const EdgeInsets.only(top: 14),
                   child: EpisodePickerGrid(
                     episodes: episodes,
-                    currentIndex: -1,
+                    currentIndex: currentIndex,
                     onSelect: (index) {
-                      final episode = episodes[index];
-                      if (episode.sourceLocked || !episode.sourceAvailable)
+                      if (onEpisodeSelected != null) {
+                        onEpisodeSelected!(index);
                         return;
+                      }
+                      final episode = episodes[index];
                       context.push(
                           '/watch/${series.id}?episodeId=${Uri.encodeComponent(episode.id)}');
                     },
@@ -169,24 +228,43 @@ class _Header extends StatelessWidget {
   }
 }
 
-class _IntroTab extends StatelessWidget {
+class _IntroTab extends StatefulWidget {
   const _IntroTab({required this.series});
 
   final Series series;
 
   @override
+  State<_IntroTab> createState() => _IntroTabState();
+}
+
+class _IntroTabState extends State<_IntroTab> {
+  bool _expanded = false;
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
+    final series = widget.series;
     final tags = [...series.genres, ...series.tags].toSet().toList();
+    final hasMore = series.description.length > 180;
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 18, 20, 32),
       children: [
         Text(
-            series.description.isEmpty
-                ? l10n.noDescription
-                : series.description,
-            style:
-                const TextStyle(color: AppColors.textSecondary, height: 1.45)),
+          series.description.isEmpty ? l10n.noDescription : series.description,
+          maxLines: hasMore && !_expanded ? 4 : null,
+          overflow: hasMore && !_expanded
+              ? TextOverflow.ellipsis
+              : TextOverflow.visible,
+          style: const TextStyle(color: AppColors.textSecondary, height: 1.45),
+        ),
+        if (hasMore)
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () => setState(() => _expanded = !_expanded),
+              child: Text(_expanded ? l10n.collapse : l10n.readMore),
+            ),
+          ),
         if (tags.isNotEmpty) ...[
           const SizedBox(height: 18),
           Wrap(

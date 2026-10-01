@@ -1,9 +1,12 @@
 import '../../../domain/entities/category.dart';
 import '../../../domain/entities/series.dart';
 
+enum DiscoverHomeTab { hot, newReleases, ranking, categories }
+
 class DiscoverState {
   const DiscoverState({
     this.currentCategory = Category.forYou,
+    this.selectedTab = DiscoverHomeTab.hot,
     this.series = const [],
     this.sections = const [],
     this.hero,
@@ -12,6 +15,7 @@ class DiscoverState {
   });
 
   final Category currentCategory;
+  final DiscoverHomeTab selectedTab;
   final List<Series> series;
   final List<DiscoverSection> sections;
   final Series? hero;
@@ -20,6 +24,7 @@ class DiscoverState {
 
   DiscoverState copyWith({
     Category? currentCategory,
+    DiscoverHomeTab? selectedTab,
     List<Series>? series,
     List<DiscoverSection>? sections,
     Series? hero,
@@ -29,6 +34,7 @@ class DiscoverState {
   }) {
     return DiscoverState(
       currentCategory: currentCategory ?? this.currentCategory,
+      selectedTab: selectedTab ?? this.selectedTab,
       series: series ?? this.series,
       sections: sections ?? this.sections,
       hero: clearHero ? null : hero ?? this.hero,

@@ -7,18 +7,48 @@ import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
 
 import '../../../core/error/friendly_error.dart';
+import '../../../core/async/retryable_future_cache.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../domain/entities/episode.dart';
 import '../../../domain/entities/series.dart';
 import '../../../domain/entities/user.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/format/compact_count.dart';
-import '../../../shared/widgets/episode_picker_grid.dart';
 import '../../../shared/widgets/save_series_button.dart';
 import '../application/episode_access.dart';
 import 'episode_player_view.dart';
+import '../../series_detail/presentation/series_detail_page.dart';
 import '../../shorts/application/shorts_share_link.dart';
+
+int resolveInitialEpisodeIndex(List<Episode> episodes, String? requestedId) {
+  if (episodes.isEmpty) return 0;
+  final requested = requestedId == null
+      ? -1
+      : episodes.indexWhere((episode) => episode.id == requestedId);
+  if (requested >= 0) return requested;
+  final firstPlayable = episodes.indexWhere(
+    (episode) =>
+        episode.sourceAvailable &&
+        !episode.sourceLocked &&
+        !episode.isVipLocked,
+  );
+  return firstPlayable >= 0 ? firstPlayable : 0;
+}
+
+int nextEpisodeIndex(int currentIndex, int episodeCount) {
+  return currentIndex + 1 < episodeCount ? currentIndex + 1 : -1;
+}
+
+List<int> adjacentEpisodeIndices(int currentIndex, int episodeCount) {
+  return [currentIndex - 1, currentIndex + 1]
+      .where((index) => index >= 0 && index < episodeCount)
+      .toList(growable: false);
+}
+
+double clampSeekPosition(double value, double duration) {
+  if (duration <= 0) return 0;
+  return value.clamp(0, duration).toDouble();
+}
 
 /// Full-screen player used by Home, Collection and Shorts "Watch all".
 ///
@@ -42,7 +72,8 @@ class MainPlayerPage extends ConsumerStatefulWidget {
 class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
     with WidgetsBindingObserver {
   late final BetterPlayerController _controller;
-  late final PageController _pageController;
+  late PageController _pageController;
+  final _urlCache = RetryableFutureCache<String, String>();
 
   Series? _series;
   List<Episode> _episodes = const [];
@@ -52,6 +83,9 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
   bool _controllerReady = false;
   bool _paused = false;
   bool _ended = false;
+  bool _showingTransientPause = false;
+  double? _seekPreview;
+  Timer? _transientControlTimer;
   double _position = 0;
   double _duration = 0;
   Object? _error;
@@ -78,6 +112,8 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _pageController.dispose();
+    _urlCache.clear();
+    _transientControlTimer?.cancel();
     _controller
       ..removeEventsListener(_onPlayerEvent)
       ..dispose(forceDispose: true);
@@ -99,21 +135,14 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
       final episodes =
           await ref.read(episodeRepositoryProvider).bySeriesId(widget.seriesId);
       if (!mounted) return;
-      final requested = widget.episodeId == null
-          ? -1
-          : episodes.indexWhere((episode) => episode.id == widget.episodeId);
-      final firstPlayable = episodes.indexWhere(
-        (episode) =>
-            episode.sourceAvailable &&
-            !episode.sourceLocked &&
-            !episode.isVipLocked,
-      );
+      final resolvedIndex =
+          resolveInitialEpisodeIndex(episodes, widget.episodeId);
+      _pageController.dispose();
+      _pageController = PageController(initialPage: resolvedIndex);
       setState(() {
         _series = series;
         _episodes = episodes;
-        _currentIndex = requested >= 0
-            ? requested
-            : (firstPlayable >= 0 ? firstPlayable : 0);
+        _currentIndex = resolvedIndex;
         _loading = false;
         _error = null;
       });
@@ -130,13 +159,15 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
   void _onPlayerEvent(BetterPlayerEvent event) {
     if (!mounted) return;
     if (event.betterPlayerEventType == BetterPlayerEventType.exception) {
+      if (_loading) return;
       setState(() => _error = event.parameters?['exception'] ?? 'playback');
       return;
     }
     if (event.betterPlayerEventType == BetterPlayerEventType.finished) {
+      if (_loading) return;
       if (_ended) return;
       _ended = true;
-      if (_currentIndex + 1 < _episodes.length) {
+      if (nextEpisodeIndex(_currentIndex, _episodes.length) >= 0) {
         unawaited(_pageController.nextPage(
           duration: const Duration(milliseconds: 280),
           curve: Curves.easeOutCubic,
@@ -147,6 +178,7 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
       return;
     }
     if (event.betterPlayerEventType != BetterPlayerEventType.progress) return;
+    if (_loading) return;
     final position = event.parameters?['progress'] as Duration?;
     final duration = event.parameters?['duration'] as Duration?;
     if (position == null || duration == null) return;
@@ -160,6 +192,14 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
     if (index < 0 || index >= _episodes.length) return;
     final generation = ++_generation;
     final episode = _episodes[index];
+    _urlCache.retainOnly(
+      _episodes
+          .asMap()
+          .entries
+          .where((entry) => (entry.key - index).abs() <= 1)
+          .where((entry) => _accessFor(entry.value) == EpisodeAccessState.open)
+          .map((entry) => entry.value.id),
+    );
     setState(() {
       _currentIndex = index;
       _loading = true;
@@ -168,6 +208,8 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
       _ended = false;
       _position = 0;
       _duration = 0;
+      _showingTransientPause = false;
+      _seekPreview = null;
     });
     final user = ref.read(currentAppUserDocProvider).value;
     final effectiveVip =
@@ -181,12 +223,7 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
     }
 
     try {
-      final url = await ref.read(videoSourceProvider).playableUrl(
-            seriesId: widget.seriesId,
-            episodeId: episode.id,
-            storagePath: episode.videoUrl,
-            chapterIndex: episode.sourceChapterIndex,
-          );
+      final url = await _urlFor(episode);
       if (!mounted || generation != _generation) return;
       await _controller.pause();
       await _controller.setupDataSource(
@@ -204,6 +241,7 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
         _paused = !autoplay;
       });
       if (autoplay) await _controller.play();
+      _prefetchAdjacent(index);
     } catch (error) {
       if (!mounted || generation != _generation) return;
       setState(() {
@@ -215,61 +253,83 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
 
   void _togglePlayback() {
     if (!_controllerReady) return;
-    setState(() => _paused = !_paused);
+    final nextPaused = !_paused;
+    setState(() {
+      _paused = nextPaused;
+      _showingTransientPause = !nextPaused;
+    });
     if (_paused) {
       unawaited(_controller.pause());
     } else {
       unawaited(_controller.play());
+      _transientControlTimer?.cancel();
+      _transientControlTimer = Timer(const Duration(milliseconds: 650), () {
+        if (mounted) setState(() => _showingTransientPause = false);
+      });
     }
   }
 
   void _seek(double value) {
     if (_duration <= 0) return;
-    final target =
-        Duration(milliseconds: value.round().clamp(0, _duration.round()));
+    final target = Duration(
+      milliseconds: clampSeekPosition(value, _duration).round(),
+    );
     unawaited(_controller.seekTo(target));
+  }
+
+  EpisodeAccessState _accessFor(Episode episode) {
+    final user = ref.read(currentAppUserDocProvider).value;
+    final effectiveVip =
+        ref.read(effectiveVipProvider).value ?? user?.isVip ?? false;
+    return accessFor(episode, user, effectiveVip: effectiveVip);
+  }
+
+  Future<String> _urlFor(Episode episode) {
+    return _urlCache.getOrCreate(
+      episode.id,
+      () => ref.read(videoSourceProvider).playableUrl(
+            seriesId: widget.seriesId,
+            episodeId: episode.id,
+            storagePath: episode.videoUrl,
+            chapterIndex: episode.sourceChapterIndex,
+          ),
+    );
+  }
+
+  void _prefetchAdjacent(int index) {
+    for (final adjacent in adjacentEpisodeIndices(index, _episodes.length)) {
+      final episode = _episodes[adjacent];
+      if (_accessFor(episode) != EpisodeAccessState.open) continue;
+      unawaited(_urlFor(episode).then<void>((_) {}, onError: (_, __) {}));
+    }
   }
 
   Future<void> _showEpisodes() async {
     if (_series == null) return;
-    final selected = await showModalBottomSheet<int>(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: AppColors.surface,
-      builder: (context) => SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.only(top: 12),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Center(
-                child: Container(
-                  width: 38,
-                  height: 4,
-                  decoration: BoxDecoration(
-                    color: Colors.white24,
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-              ),
-              _SheetHeader(series: _series!, episodes: _episodes),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
-                child: Text(
-                  AppLocalizations.of(context)!.chooseEpisode,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-              ),
-              const SizedBox(height: 10),
-              EpisodePickerGrid(
-                episodes: _episodes,
-                currentIndex: _currentIndex,
-                onSelect: Navigator.of(context).pop,
-              ),
-            ],
-          ),
-        ),
-      ),
+    final selected = await showSeriesDetailSheet(
+      context,
+      series: _series!,
+      episodes: _episodes,
+      initialTab: 1,
+      currentIndex: _currentIndex,
+    );
+    if (selected != null && mounted) {
+      await _pageController.animateToPage(
+        selected,
+        duration: const Duration(milliseconds: 280),
+        curve: Curves.easeOutCubic,
+      );
+    }
+  }
+
+  Future<void> _showDetailSheet() async {
+    final series = _series;
+    if (series == null) return;
+    final selected = await showSeriesDetailSheet(
+      context,
+      series: series,
+      episodes: _episodes,
+      currentIndex: _currentIndex,
     );
     if (selected != null && mounted) {
       await _pageController.animateToPage(
@@ -331,12 +391,6 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
         body: Center(child: Text(l10n.sourceUnavailable)),
       );
     }
-    final episode = _episodes[_currentIndex.clamp(0, _episodes.length - 1)];
-    final user = ref.watch(currentAppUserDocProvider).value;
-    final effectiveVip =
-        ref.watch(effectiveVipProvider).value ?? user?.isVip ?? false;
-    final access = accessFor(episode, user, effectiveVip: effectiveVip);
-
     return Scaffold(
       backgroundColor: Colors.black,
       body: PageView.builder(
@@ -349,13 +403,14 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
         itemBuilder: (context, index) {
           final active = index == _currentIndex;
           final item = _episodes[index];
+          final itemAccess = _accessFor(item);
           return Stack(
             fit: StackFit.expand,
             children: [
               _EpisodeBackdrop(episode: item),
               if (active &&
                   _controllerReady &&
-                  access == EpisodeAccessState.open)
+                  itemAccess == EpisodeAccessState.open)
                 Positioned.fill(
                   child: IgnorePointer(
                     child: LayoutBuilder(
@@ -374,26 +429,38 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
                     ),
                   ),
                 ),
-              if (active)
-                _MainPlayerChrome(
-                  series: series,
-                  episode: episode,
-                  access: access,
-                  loading: _loading,
-                  error: _error,
-                  paused: _paused,
-                  ended: _ended && index == _episodes.length - 1,
-                  onTapVideo: _togglePlayback,
-                  onBack: context.pop,
-                  onTitle: () => context.push('/series/${series.id}'),
-                  onEpisodes: _showEpisodes,
-                  onShare: _share,
-                  onRetry: () =>
-                      unawaited(_switchToEpisode(index, autoplay: true)),
-                  position: _position,
-                  duration: _duration,
-                  onSeek: _seek,
-                ),
+              _MainPlayerChrome(
+                series: series,
+                episode: item,
+                access: itemAccess,
+                interactive: active,
+                loading: active && _loading,
+                error: active ? _error : null,
+                paused: active && _paused,
+                showTransientPause: active && _showingTransientPause,
+                ended: active && _ended && index == _episodes.length - 1,
+                onTapVideo: active ? _togglePlayback : null,
+                onBack: active ? context.pop : null,
+                onTitle: active ? _showDetailSheet : null,
+                onEpisodes: active ? _showEpisodes : null,
+                onShare: active ? _share : null,
+                onRetry: active
+                    ? () => unawaited(_switchToEpisode(index, autoplay: true))
+                    : null,
+                position: active ? _position : 0,
+                duration: active ? _duration : 0,
+                onSeekStart: active ? (_) {} : null,
+                onSeekChanged: active
+                    ? (value) => setState(() => _seekPreview = value)
+                    : null,
+                onSeekEnd: active
+                    ? (value) {
+                        _seek(value);
+                        setState(() => _seekPreview = null);
+                      }
+                    : null,
+                seekPreview: active ? _seekPreview : null,
+              ),
             ],
           );
         },
@@ -427,9 +494,11 @@ class _MainPlayerChrome extends StatelessWidget {
     required this.series,
     required this.episode,
     required this.access,
+    required this.interactive,
     required this.loading,
     required this.error,
     required this.paused,
+    required this.showTransientPause,
     required this.ended,
     required this.onTapVideo,
     required this.onBack,
@@ -439,25 +508,33 @@ class _MainPlayerChrome extends StatelessWidget {
     required this.onRetry,
     required this.position,
     required this.duration,
-    required this.onSeek,
+    required this.onSeekStart,
+    required this.onSeekChanged,
+    required this.onSeekEnd,
+    required this.seekPreview,
   });
 
   final Series series;
   final Episode episode;
   final EpisodeAccessState access;
+  final bool interactive;
   final bool loading;
   final Object? error;
   final bool paused;
+  final bool showTransientPause;
   final bool ended;
-  final VoidCallback onTapVideo;
-  final VoidCallback onBack;
-  final VoidCallback onTitle;
-  final VoidCallback onEpisodes;
-  final VoidCallback onShare;
-  final VoidCallback onRetry;
+  final VoidCallback? onTapVideo;
+  final VoidCallback? onBack;
+  final VoidCallback? onTitle;
+  final VoidCallback? onEpisodes;
+  final VoidCallback? onShare;
+  final VoidCallback? onRetry;
   final double position;
   final double duration;
-  final ValueChanged<double> onSeek;
+  final ValueChanged<double>? onSeekStart;
+  final ValueChanged<double>? onSeekChanged;
+  final ValueChanged<double>? onSeekEnd;
+  final double? seekPreview;
 
   @override
   Widget build(BuildContext context) {
@@ -465,14 +542,15 @@ class _MainPlayerChrome extends StatelessWidget {
     final user = ProviderScope.containerOf(context)
         .read(currentAppUserDocProvider)
         .value;
-    return Stack(
+    final content = Stack(
       fit: StackFit.expand,
       children: [
-        GestureDetector(
-          behavior: HitTestBehavior.translucent,
-          onTap: onTapVideo,
-          child: const SizedBox.expand(),
-        ),
+        if (interactive)
+          GestureDetector(
+            behavior: HitTestBehavior.translucent,
+            onTap: onTapVideo,
+            child: const SizedBox.expand(),
+          ),
         IgnorePointer(
           child: DecoratedBox(
             decoration: BoxDecoration(
@@ -512,15 +590,6 @@ class _MainPlayerChrome extends StatelessWidget {
                         fontWeight: FontWeight.w700),
                   ),
                   const Spacer(),
-                  TextButton.icon(
-                    onPressed: null,
-                    icon: const Icon(Icons.speed_rounded, color: Colors.white),
-                    label: Text(l10n.speed,
-                        style: const TextStyle(color: Colors.white)),
-                  ),
-                  IconButton(
-                      onPressed: null,
-                      icon: const Icon(Icons.more_vert, color: Colors.white)),
                 ],
               ),
             ),
@@ -533,10 +602,14 @@ class _MainPlayerChrome extends StatelessWidget {
           Center(
               child: FilledButton(
                   onPressed: onRetry, child: Text(l10n.tapToRetry))),
-        if (access == EpisodeAccessState.open && !loading && error == null)
+        if (interactive &&
+            access == EpisodeAccessState.open &&
+            !loading &&
+            error == null &&
+            (paused || showTransientPause))
           Center(
             child: AnimatedOpacity(
-              opacity: paused ? 1 : 0,
+              opacity: paused || showTransientPause ? 1 : 0,
               duration: const Duration(milliseconds: 220),
               child: Container(
                 width: 76,
@@ -584,11 +657,17 @@ class _MainPlayerChrome extends StatelessWidget {
           child: SafeArea(
             top: false,
             child: _SeekBar(
-                position: position, duration: duration, onSeek: onSeek),
+              position: seekPreview ?? position,
+              duration: duration,
+              onSeekStart: onSeekStart,
+              onSeekChanged: onSeekChanged,
+              onSeekEnd: onSeekEnd,
+            ),
           ),
         ),
       ],
     );
+    return interactive ? content : IgnorePointer(child: content);
   }
 }
 
@@ -604,8 +683,8 @@ class _PlayerRail extends ConsumerWidget {
   final Series series;
   final Episode episode;
   final AppUser? user;
-  final VoidCallback onEpisodes;
-  final VoidCallback onShare;
+  final VoidCallback? onEpisodes;
+  final VoidCallback? onShare;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -701,7 +780,7 @@ class _BottomInfo extends StatelessWidget {
   final Series series;
   final Episode episode;
   final bool ended;
-  final VoidCallback onTitle;
+  final VoidCallback? onTitle;
 
   @override
   Widget build(BuildContext context) {
@@ -745,11 +824,17 @@ class _BottomInfo extends StatelessWidget {
 
 class _SeekBar extends StatelessWidget {
   const _SeekBar(
-      {required this.position, required this.duration, required this.onSeek});
+      {required this.position,
+      required this.duration,
+      required this.onSeekStart,
+      required this.onSeekChanged,
+      required this.onSeekEnd});
 
   final double position;
   final double duration;
-  final ValueChanged<double> onSeek;
+  final ValueChanged<double>? onSeekStart;
+  final ValueChanged<double>? onSeekChanged;
+  final ValueChanged<double>? onSeekEnd;
 
   @override
   Widget build(BuildContext context) {
@@ -767,7 +852,9 @@ class _SeekBar extends StatelessWidget {
           value: position.clamp(0, duration),
           min: 0,
           max: duration,
-          onChanged: onSeek),
+          onChangeStart: onSeekStart,
+          onChanged: onSeekChanged,
+          onChangeEnd: onSeekEnd),
     );
   }
 }
@@ -800,64 +887,6 @@ class _AccessOverlay extends StatelessWidget {
               textAlign: TextAlign.center,
               style: const TextStyle(
                   color: Colors.white, fontWeight: FontWeight.w700)),
-        ],
-      ),
-    );
-  }
-}
-
-class _SheetHeader extends StatelessWidget {
-  const _SheetHeader({required this.series, required this.episodes});
-
-  final Series series;
-  final List<Episode> episodes;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 18, 20, 18),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          SizedBox(
-            width: 74,
-            height: 102,
-            child: ClipRRect(
-              borderRadius: BorderRadius.circular(8),
-              child: series.coverUrl.isEmpty
-                  ? const ColoredBox(
-                      color: AppColors.surfaceElevated,
-                      child: Icon(Icons.movie_outlined))
-                  : Image.network(series.coverUrl,
-                      fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const ColoredBox(
-                          color: AppColors.surfaceElevated,
-                          child: Icon(Icons.movie_outlined))),
-            ),
-          ),
-          const SizedBox(width: 14),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(series.title,
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleLarge),
-                const SizedBox(height: 8),
-                Text(
-                    AppLocalizations.of(context)!.views(compactCount(
-                        series.watchCount > 0
-                            ? series.watchCount
-                            : series.popularity)),
-                    style: const TextStyle(color: AppColors.textSecondary)),
-                const SizedBox(height: 4),
-                Text(
-                    AppLocalizations.of(context)!.episodeCount(episodes.length),
-                    style: const TextStyle(color: AppColors.textMuted)),
-              ],
-            ),
-          ),
         ],
       ),
     );

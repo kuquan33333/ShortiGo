@@ -13,6 +13,29 @@ const shortsCandidateLimit = 30;
 const shortsUsableSeriesTarget = 20;
 const shortsChapterConcurrency = 5;
 
+List<Series> interleaveSeriesGroups(
+  List<List<Series>> groups, {
+  int limit = shortsCandidateLimit,
+}) {
+  final candidates = <Series>[];
+  final seenIds = <String>{};
+  final maxGroupLength = groups.fold<int>(
+    0,
+    (max, group) => group.length > max ? group.length : max,
+  );
+  for (var index = 0;
+      index < maxGroupLength && candidates.length < limit;
+      index++) {
+    for (final group in groups) {
+      if (index >= group.length) continue;
+      final series = group[index];
+      if (seenIds.add(series.id)) candidates.add(series);
+      if (candidates.length >= limit) break;
+    }
+  }
+  return candidates;
+}
+
 class ShortsFeedState {
   const ShortsFeedState({
     this.episodes = const [],
@@ -42,15 +65,7 @@ class ShortsFeedNotifier extends AsyncNotifier<ShortsFeedState> {
         seriesRepo.byCategory(Category.recommended,
             limit: shortsCandidateLimit),
       ]);
-      final candidates = <Series>[];
-      final seenIds = <String>{};
-      for (final group in groups) {
-        for (final series in group) {
-          if (seenIds.add(series.id)) candidates.add(series);
-          if (candidates.length >= shortsCandidateLimit) break;
-        }
-        if (candidates.length >= shortsCandidateLimit) break;
-      }
+      final candidates = interleaveSeriesGroups(groups);
       if (candidates.isEmpty) return const ShortsFeedState();
 
       final usableEpisodes = <Episode>[];
