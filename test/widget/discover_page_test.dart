@@ -54,7 +54,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.byType(GridView), findsOneWidget);
+    expect(find.byType(CustomScrollView), findsOneWidget);
     expect(find.text('Xếp hạng'), findsOneWidget);
     expect(find.text('Danh mục'), findsOneWidget);
 

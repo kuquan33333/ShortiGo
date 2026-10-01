@@ -82,13 +82,14 @@ class _DiscoverPageState extends ConsumerState<DiscoverPage> {
             ),
           ),
           _gridSliver(context, state.series),
+          _loadMoreSliver(context, state),
         ],
       );
     }
     if (state.selectedTab == DiscoverHomeTab.ranking) {
       return _rankingList(context, state.series);
     }
-    return _grid(context, state.series);
+    return _grid(context, state);
   }
 
   Widget _errorView(BuildContext context, Object error) {
@@ -101,29 +102,18 @@ class _DiscoverPageState extends ConsumerState<DiscoverPage> {
     );
   }
 
-  Widget _grid(BuildContext context, List<Series> series) {
-    return GridView.builder(
-      padding: const EdgeInsets.fromLTRB(16, 12, 16, 28),
-      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: 3,
-        mainAxisSpacing: 18,
-        crossAxisSpacing: 10,
-        childAspectRatio: .49,
-      ),
-      itemCount: series.length,
-      itemBuilder: (_, index) {
-        final item = series[index];
-        return SeriesCard(
-          series: item,
-          onTap: () => context.push('/watch/${item.id}'),
-        );
-      },
+  Widget _grid(BuildContext context, DiscoverState state) {
+    return CustomScrollView(
+      slivers: [
+        _gridSliver(context, state.series),
+        _loadMoreSliver(context, state),
+      ],
     );
   }
 
   SliverPadding _gridSliver(BuildContext context, List<Series> series) {
     return SliverPadding(
-      padding: const EdgeInsets.fromLTRB(16, 4, 16, 28),
+      padding: const EdgeInsets.fromLTRB(16, 4, 16, 8),
       sliver: SliverGrid(
         gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
           crossAxisCount: 3,
@@ -140,6 +130,48 @@ class _DiscoverPageState extends ConsumerState<DiscoverPage> {
             );
           },
           childCount: series.length,
+        ),
+      ),
+    );
+  }
+
+  SliverToBoxAdapter _loadMoreSliver(
+    BuildContext context,
+    DiscoverState state,
+  ) {
+    if (!state.hasMore) {
+      return const SliverToBoxAdapter(child: SizedBox(height: 24));
+    }
+    final l10n = AppLocalizations.of(context)!;
+    final label = state.loadMoreError == null ? l10n.loadMore : l10n.retry;
+    return SliverToBoxAdapter(
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(16, 8, 16, 28),
+        child: AppPressable(
+          onTap: state.isLoadingMore
+              ? null
+              : () => unawaited(
+                    ref.read(discoverNotifierProvider.notifier).loadMore(),
+                  ),
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              color: AppColors.surfaceElevated,
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: AppColors.divider),
+            ),
+            child: SizedBox(
+              height: 44,
+              child: Center(
+                child: state.isLoadingMore
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : Text(label),
+              ),
+            ),
+          ),
         ),
       ),
     );

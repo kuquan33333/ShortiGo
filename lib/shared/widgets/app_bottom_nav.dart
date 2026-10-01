@@ -12,13 +12,13 @@ class AppBottomNav extends StatelessWidget {
     (l10n) => _TabSpec(
           icon: Icons.home_outlined,
           selected: Icons.home,
-          label: l10n.discover,
+          label: l10n.homeNav,
           route: '/discover',
         ),
     (l10n) => _TabSpec(
           icon: Icons.play_circle_outline,
           selected: Icons.play_circle,
-          label: l10n.shorts,
+          label: l10n.forYouNav,
           route: '/shorts',
         ),
     (l10n) => _TabSpec(

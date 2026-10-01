@@ -18,6 +18,12 @@ class AppLocalizationsEn extends AppLocalizations {
   String get shorts => 'Shorts';
 
   @override
+  String get homeNav => 'Home';
+
+  @override
+  String get forYouNav => 'For You';
+
+  @override
   String get rewards => 'Rewards';
 
   @override

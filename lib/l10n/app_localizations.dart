@@ -116,6 +116,18 @@ abstract class AppLocalizations {
   /// **'Shorts'**
   String get shorts;
 
+  /// No description provided for @homeNav.
+  ///
+  /// In en, this message translates to:
+  /// **'Home'**
+  String get homeNav;
+
+  /// No description provided for @forYouNav.
+  ///
+  /// In en, this message translates to:
+  /// **'For You'**
+  String get forYouNav;
+
   /// No description provided for @rewards.
   ///
   /// In en, this message translates to:

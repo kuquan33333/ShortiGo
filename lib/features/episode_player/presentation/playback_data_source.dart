@@ -34,6 +34,20 @@ class PlaybackCandidateSequence {
   }
 }
 
+/// Keeps the native player surface ahead of media resolution/setup.
+Future<void> mountPlayerBeforeSetup({
+  required bool playerMounted,
+  required Future<void> Function() mountPlayer,
+  required Future<void> Function() frameReady,
+  required Future<PlayableMedia> Function() resolveMedia,
+  required Future<void> Function(PlayableMedia media) setupMedia,
+}) async {
+  if (!playerMounted) await mountPlayer();
+  await frameReady();
+  final media = await resolveMedia();
+  await setupMedia(media);
+}
+
 typedef PlaybackCandidateSetup = Future<void> Function(String url);
 typedef PlaybackCandidateRefresh = Future<PlayableMedia> Function();
 

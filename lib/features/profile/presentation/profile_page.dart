@@ -26,198 +26,201 @@ class ProfilePage extends ConsumerWidget {
     final l10n = AppLocalizations.of(context)!;
 
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.profile)),
-      body: async.when(
-        loading: () => const LoadingView(),
-        error: (error, _) => ErrorView(
-          error: localizedFriendlyErrorFor(context, error),
-          onRetry: () => ref.invalidate(profileNotifierProvider),
-        ),
-        data: (state) {
-          final user = state.user;
-          final effectiveVip =
-              ref.watch(effectiveVipProvider).value ?? user?.isVip ?? false;
-          if (user == null) {
-            return _GuestProfile(effectiveVip: effectiveVip);
-          }
+      body: SafeArea(
+        child: async.when(
+          loading: () => const LoadingView(),
+          error: (error, _) => ErrorView(
+            error: localizedFriendlyErrorFor(context, error),
+            onRetry: () => ref.invalidate(profileNotifierProvider),
+          ),
+          data: (state) {
+            final user = state.user;
+            final effectiveVip =
+                ref.watch(effectiveVipProvider).value ?? user?.isVip ?? false;
+            if (user == null) {
+              return _GuestProfile(effectiveVip: effectiveVip);
+            }
 
-          final initial = _initialFor(user.displayName ?? user.email);
-          final rewardsEarned = state.transactions
-              .where((transaction) => transaction.bonusDelta > 0)
-              .fold<int>(0, (sum, transaction) => sum + transaction.bonusDelta);
+            final initial = _initialFor(user.displayName ?? user.email);
+            final rewardsEarned = state.transactions
+                .where((transaction) => transaction.bonusDelta > 0)
+                .fold<int>(
+                    0, (sum, transaction) => sum + transaction.bonusDelta);
 
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 28,
-                    backgroundColor: AppColors.surface,
-                    backgroundImage:
-                        user.photoUrl != null && user.photoUrl!.isNotEmpty
-                            ? NetworkImage(user.photoUrl!)
-                            : null,
-                    child: user.photoUrl == null || user.photoUrl!.isEmpty
-                        ? Text(initial)
-                        : null,
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          user.displayName ?? user.email,
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        Text(
-                          user.email,
-                          style: const TextStyle(
-                            color: AppColors.textSecondary,
+            return ListView(
+              padding: const EdgeInsets.all(16),
+              children: [
+                Row(
+                  children: [
+                    CircleAvatar(
+                      radius: 28,
+                      backgroundColor: AppColors.surface,
+                      backgroundImage:
+                          user.photoUrl != null && user.photoUrl!.isNotEmpty
+                              ? NetworkImage(user.photoUrl!)
+                              : null,
+                      child: user.photoUrl == null || user.photoUrl!.isEmpty
+                          ? Text(initial)
+                          : null,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            user.displayName ?? user.email,
+                            style: Theme.of(context).textTheme.titleLarge,
                           ),
+                          Text(
+                            user.email,
+                            style: const TextStyle(
+                              color: AppColors.textSecondary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 24),
+                _ViewerStatus(isVip: effectiveVip),
+                const SizedBox(height: 16),
+                Card(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _WalletCell(label: l10n.coins, value: user.coins),
+                        _WalletCell(label: l10n.bonus, value: user.bonus),
+                        _WalletCell(
+                          label: l10n.vip,
+                          value: effectiveVip ? l10n.yes : l10n.no,
                         ),
                       ],
                     ),
                   ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              _ViewerStatus(isVip: effectiveVip),
-              const SizedBox(height: 16),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      _WalletCell(label: l10n.coins, value: user.coins),
-                      _WalletCell(label: l10n.bonus, value: user.bonus),
-                      _WalletCell(
-                        label: l10n.vip,
-                        value: effectiveVip ? l10n.yes : l10n.no,
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _SnapshotCell(
+                        icon: Icons.bookmark,
+                        value: '${user.favoriteSeriesIds.length}',
+                        label: l10n.saved,
                       ),
-                    ],
-                  ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _SnapshotCell(
+                        icon: Icons.bolt,
+                        value: '$rewardsEarned',
+                        label: l10n.earned,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _SnapshotCell(
+                        icon: Icons.lock_open,
+                        value: '${user.unlockedEpisodeIds.length}',
+                        label: l10n.unlocked,
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: _SnapshotCell(
-                      icon: Icons.bookmark,
-                      value: '${user.favoriteSeriesIds.length}',
-                      label: l10n.saved,
-                    ),
+                const SizedBox(height: 24),
+                if (state.transactions.isNotEmpty) ...[
+                  Text(
+                    l10n.recentActivity,
+                    style: TextStyle(color: AppColors.textSecondary),
                   ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _SnapshotCell(
-                      icon: Icons.bolt,
-                      value: '$rewardsEarned',
-                      label: l10n.earned,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _SnapshotCell(
-                      icon: Icons.lock_open,
-                      value: '${user.unlockedEpisodeIds.length}',
-                      label: l10n.unlocked,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              if (state.transactions.isNotEmpty) ...[
-                Text(
-                  l10n.recentActivity,
-                  style: TextStyle(color: AppColors.textSecondary),
-                ),
-                const SizedBox(height: 8),
-                ...state.transactions.take(10).map(
-                      (transaction) => ListTile(
-                        dense: true,
-                        leading: Icon(
-                          _iconFor(transaction.type),
-                          color: AppColors.primary,
-                        ),
-                        title: Text(transaction.friendlyTitle(l10n)),
-                        trailing: Text(
-                          transaction.walletDeltaLabel(l10n),
-                          style: TextStyle(
-                            color: transaction.bonusDelta < 0 ||
-                                    transaction.coinsDelta < 0
-                                ? AppColors.textSecondary
-                                : AppColors.success,
+                  const SizedBox(height: 8),
+                  ...state.transactions.take(10).map(
+                        (transaction) => ListTile(
+                          dense: true,
+                          leading: Icon(
+                            _iconFor(transaction.type),
+                            color: AppColors.primary,
+                          ),
+                          title: Text(transaction.friendlyTitle(l10n)),
+                          trailing: Text(
+                            transaction.walletDeltaLabel(l10n),
+                            style: TextStyle(
+                              color: transaction.bonusDelta < 0 ||
+                                      transaction.coinsDelta < 0
+                                  ? AppColors.textSecondary
+                                  : AppColors.success,
+                            ),
                           ),
                         ),
                       ),
-                    ),
-              ],
-              if (kDebugMode) ...[
-                const SizedBox(height: 24),
-                const _AdDiagnostics(),
-              ],
-              if (!effectiveVip) ...[
+                ],
+                if (kDebugMode) ...[
+                  const SizedBox(height: 24),
+                  const _AdDiagnostics(),
+                ],
+                if (!effectiveVip) ...[
+                  const SizedBox(height: 16),
+                  FilledButton(
+                    onPressed: () => context.push('/subscribe'),
+                    child: Text(l10n.getVip),
+                  ),
+                ],
                 const SizedBox(height: 16),
-                FilledButton(
-                  onPressed: () => context.push('/subscribe'),
-                  child: Text(l10n.getVip),
+                ListTile(
+                  leading: const Icon(Icons.settings_outlined),
+                  title: Text(l10n.settings),
+                  onTap: () => context.push('/settings'),
+                ),
+                const SizedBox(height: 16),
+                AccountActionsSection(
+                  isDeleting: deletion.isDeleting,
+                  error: deletion.error,
+                  onRestorePurchases: () async {
+                    await ref
+                        .read(subscriptionNotifierProvider.notifier)
+                        .restorePurchases();
+                    if (!context.mounted) {
+                      return;
+                    }
+                    final result =
+                        ref.read(subscriptionNotifierProvider).valueOrNull;
+                    final message = result?.message == 'subscription-restored'
+                        ? l10n.subscriptionRestored
+                        : result?.message == 'no-active-vip-purchase'
+                            ? l10n.noActiveVipPurchase
+                            : result?.error != null
+                                ? localizedFriendlyErrorFor(
+                                    context,
+                                    result!.error!,
+                                  ).message
+                                : null;
+                    if (message != null) {
+                      ScaffoldMessenger.of(context)
+                          .showSnackBar(SnackBar(content: Text(message)));
+                    }
+                  },
+                  onDeleteAccount: () async {
+                    final deleted = await ref
+                        .read(accountDeletionNotifierProvider.notifier)
+                        .deleteAccount();
+                    if (deleted && context.mounted) {
+                      context.go('/onboarding');
+                    }
+                  },
+                ),
+                const SizedBox(height: 16),
+                FilledButton.tonal(
+                  onPressed: () async =>
+                      ref.read(firebaseAuthProvider).signOut(),
+                  child: Text(l10n.signOut),
                 ),
               ],
-              const SizedBox(height: 16),
-              ListTile(
-                leading: const Icon(Icons.settings_outlined),
-                title: Text(l10n.settings),
-                onTap: () => context.push('/settings'),
-              ),
-              const SizedBox(height: 16),
-              AccountActionsSection(
-                isDeleting: deletion.isDeleting,
-                error: deletion.error,
-                onRestorePurchases: () async {
-                  await ref
-                      .read(subscriptionNotifierProvider.notifier)
-                      .restorePurchases();
-                  if (!context.mounted) {
-                    return;
-                  }
-                  final result =
-                      ref.read(subscriptionNotifierProvider).valueOrNull;
-                  final message = result?.message == 'subscription-restored'
-                      ? l10n.subscriptionRestored
-                      : result?.message == 'no-active-vip-purchase'
-                          ? l10n.noActiveVipPurchase
-                          : result?.error != null
-                              ? localizedFriendlyErrorFor(
-                                  context,
-                                  result!.error!,
-                                ).message
-                              : null;
-                  if (message != null) {
-                    ScaffoldMessenger.of(context)
-                        .showSnackBar(SnackBar(content: Text(message)));
-                  }
-                },
-                onDeleteAccount: () async {
-                  final deleted = await ref
-                      .read(accountDeletionNotifierProvider.notifier)
-                      .deleteAccount();
-                  if (deleted && context.mounted) {
-                    context.go('/onboarding');
-                  }
-                },
-              ),
-              const SizedBox(height: 16),
-              FilledButton.tonal(
-                onPressed: () async => ref.read(firebaseAuthProvider).signOut(),
-                child: Text(l10n.signOut),
-              ),
-            ],
-          );
-        },
+            );
+          },
+        ),
       ),
     );
   }

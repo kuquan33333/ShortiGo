@@ -11,20 +11,24 @@ Widget _localizedApp(Locale locale) {
     home: Builder(
       builder: (context) {
         final l10n = AppLocalizations.of(context)!;
-        return ListView(
-          children: [
-            Text(l10n.discover),
-            Text(l10n.shorts),
-            Text(l10n.rewards),
-            Text(l10n.myList),
-            Text(l10n.profile),
-            Text(l10n.settings),
-            Text(l10n.getVip),
-            Text(l10n.restorePurchases),
-            Text(localizedSectionTitle(l10n, 'trending', 'fallback')),
-            Text(localizedSectionTitle(l10n, 'dubbed', 'fallback')),
-            Text(localizedSectionTitle(l10n, 'rebirth', 'fallback')),
-          ],
+        return SingleChildScrollView(
+          child: Column(
+            children: [
+              Text(l10n.discover),
+              Text(l10n.shorts),
+              Text(l10n.homeNav),
+              Text(l10n.forYouNav),
+              Text(l10n.rewards),
+              Text(l10n.myList),
+              Text(l10n.profile),
+              Text(l10n.settings),
+              Text(l10n.getVip),
+              Text(l10n.restorePurchases),
+              Text(localizedSectionTitle(l10n, 'trending', 'fallback')),
+              Text(localizedSectionTitle(l10n, 'dubbed', 'fallback')),
+              Text(localizedSectionTitle(l10n, 'rebirth', 'fallback')),
+            ],
+          ),
         );
       },
     ),
@@ -38,6 +42,8 @@ void main() {
 
     expect(find.text('Khám phá'), findsOneWidget);
     expect(find.text('Phim ngắn'), findsOneWidget);
+    expect(find.text('Trang chủ'), findsOneWidget);
+    expect(find.text('Đề xuất'), findsOneWidget);
     expect(find.text('Phần thưởng'), findsOneWidget);
     expect(find.text('Danh sách của tôi'), findsOneWidget);
     expect(find.text('Tài khoản'), findsOneWidget);
@@ -56,6 +62,8 @@ void main() {
 
     expect(find.text('Discover'), findsOneWidget);
     expect(find.text('Shorts'), findsOneWidget);
+    expect(find.text('Home'), findsOneWidget);
+    expect(find.text('For You'), findsOneWidget);
     expect(find.text('Rewards'), findsOneWidget);
     expect(find.text('My List'), findsOneWidget);
     expect(find.text('Profile'), findsOneWidget);

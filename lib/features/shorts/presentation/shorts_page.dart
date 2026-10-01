@@ -56,6 +56,7 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
   bool _playerMounted = false;
   String? _attachedEpisodeId;
   double _playbackProgress = 0;
+  double? _seekPreviewProgress;
   int _playbackDurationMs = 0;
   bool _isPausedByUser = false;
   final _historyRecordedEpisodeIds = <String>{};
@@ -281,12 +282,33 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
                             left: 0,
                             right: 0,
                             child: ShortsVideoProgressBar(
-                              progress: isActive ? _playbackProgress : 0,
+                              progress: isActive
+                                  ? (_seekPreviewProgress ?? _playbackProgress)
+                                  : 0,
+                              durationMs: isActive ? _playbackDurationMs : 0,
                               visible: isActive &&
                                   _playerMounted &&
                                   !_isLoading &&
                                   !_hasError &&
                                   access == EpisodeAccessState.open,
+                              onSeekStart: isActive
+                                  ? (value) => setState(
+                                        () => _seekPreviewProgress = value,
+                                      )
+                                  : null,
+                              onSeekChanged: isActive
+                                  ? (value) => setState(
+                                        () => _seekPreviewProgress = value,
+                                      )
+                                  : null,
+                              onSeekEnd: isActive
+                                  ? (value) {
+                                      _seekProgress(value);
+                                      setState(
+                                        () => _seekPreviewProgress = null,
+                                      );
+                                    }
+                                  : null,
                             ),
                           ),
                           if (itemSeries != null)
@@ -310,9 +332,8 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
                                               itemSeries, episode.id),
                                         ),
                                         onWatchAll: () {
-                                          unawaited(_safePause());
-                                          context.push(
-                                            '/watch/${itemSeries.id}?episodeId=${Uri.encodeComponent(episode.id)}',
+                                          unawaited(
+                                            _openWatchAll(itemSeries, episode),
                                           );
                                         },
                                       ),
@@ -325,6 +346,13 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
                                             'shorts_actions_${episode.id}'),
                                         series: itemSeries,
                                         episode: episode,
+                                        onChooseEpisode: () => unawaited(
+                                          _showDetailSheet(
+                                            itemSeries,
+                                            episode.id,
+                                            initialTab: 1,
+                                          ),
+                                        ),
                                       ),
                                     ),
                                   ],
@@ -351,6 +379,7 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
       _isLoading = true;
       _hasError = false;
       _playbackProgress = 0;
+      _seekPreviewProgress = null;
       _playbackDurationMs = 0;
       _isPausedByUser = false;
     });
@@ -358,17 +387,34 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
     unawaited(_playEpisodeAt(index, episodes));
   }
 
-  Future<void> _showDetailSheet(Series series, String currentEpisodeId) async {
+  Future<void> _showDetailSheet(
+    Series series,
+    String currentEpisodeId, {
+    int initialTab = 0,
+  }) async {
     try {
       final episodes =
           await ref.read(episodeRepositoryProvider).bySeriesId(series.id);
       if (!mounted) return;
-      await showSeriesDetailSheet(
+      final selected = await showSeriesDetailSheet(
         context,
         series: series,
         episodes: episodes,
+        initialTab: initialTab,
         currentIndex:
             episodes.indexWhere((episode) => episode.id == currentEpisodeId),
+      );
+      if (selected == null ||
+          !mounted ||
+          selected < 0 ||
+          selected >= episodes.length) {
+        return;
+      }
+      await _safePause();
+      if (!mounted) return;
+      final selectedEpisode = episodes[selected];
+      await context.push(
+        '/watch/${series.id}?episodeId=${Uri.encodeComponent(selectedEpisode.id)}',
       );
     } catch (error) {
       if (!mounted) return;
@@ -378,6 +424,14 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
         ),
       );
     }
+  }
+
+  Future<void> _openWatchAll(Series series, Episode episode) async {
+    await _safePause();
+    if (!mounted) return;
+    await context.push(
+      '/watch/${series.id}?episodeId=${Uri.encodeComponent(episode.id)}',
+    );
   }
 
   Future<void> _playEpisodeAt(int index, List<Episode> episodes) async {
@@ -400,6 +454,7 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
         _isLoading = false;
         _hasError = false;
         _playbackProgress = 0;
+        _seekPreviewProgress = null;
         _playbackDurationMs = 0;
         _isPausedByUser = false;
       });
@@ -412,6 +467,7 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
         _hasError = false;
         _playerMounted = true;
         _playbackProgress = 0;
+        _seekPreviewProgress = null;
         _isPausedByUser = false;
       });
       await _waitEndOfFrame();
@@ -423,6 +479,7 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
         _isLoading = true;
         _hasError = false;
         _playbackProgress = 0;
+        _seekPreviewProgress = null;
         _isPausedByUser = false;
       });
     }
@@ -648,6 +705,15 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
     } catch (_) {
       // Ignore play races while switching sources.
     }
+  }
+
+  void _seekProgress(double fraction) {
+    if (_playbackDurationMs <= 0) return;
+    final target = shortsSeekTargetMilliseconds(
+      fraction,
+      _playbackDurationMs,
+    );
+    unawaited(_playerController.seekTo(Duration(milliseconds: target)));
   }
 
   void _togglePlayback() {

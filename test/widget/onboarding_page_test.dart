@@ -43,7 +43,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Discover'), findsWidgets);
+    expect(find.text('Home'), findsWidgets);
     expect(find.text('Preview ShortiGo'), findsNothing);
   });
 }

@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mocktail/mocktail.dart';
 import 'package:shortigo/core/providers.dart';
+import 'package:shortigo/data/remote/remote_series_repository.dart';
 import 'package:shortigo/domain/entities/category.dart';
 import 'package:shortigo/domain/entities/series.dart';
 import 'package:shortigo/domain/interfaces/series_repository.dart';
@@ -9,6 +10,9 @@ import 'package:shortigo/features/discover/application/discover_notifier.dart';
 import 'package:shortigo/features/discover/application/discover_state.dart';
 
 class _MockSeriesRepository extends Mock implements SeriesRepository {}
+
+class _MockRemoteSeriesRepository extends Mock
+    implements RemoteSeriesRepository {}
 
 void main() {
   late _MockSeriesRepository repo;
@@ -101,4 +105,102 @@ void main() {
       'new',
     );
   });
+
+  test('remote feeds append cursor pages for hot, new, and categories',
+      () async {
+    final remote = _MockRemoteSeriesRepository();
+    final hotA = _series('hot-a', 'Hot A', Category.hot);
+    final hotB = _series('hot-b', 'Hot B', Category.hot);
+    final hotC = _series('hot-c', 'Hot C', Category.hot);
+    final newA = _series('new-a', 'New A', Category.newReleases);
+    final newB = _series('new-b', 'New B', Category.newReleases);
+    final romanceA = _series('romance-a', 'Romance A', Category.romance);
+    final romanceB = _series('romance-b', 'Romance B', Category.romance);
+
+    when(() => remote.homeCatalog()).thenAnswer(
+      (_) async => const RemoteHomeCatalog(),
+    );
+    when(() => remote.ranked(limit: 60)).thenAnswer((_) async => const []);
+    when(
+      () => remote.collectionPage(
+        slug: any(named: 'slug'),
+        page: any(named: 'page'),
+        cursor: any(named: 'cursor'),
+        sort: any(named: 'sort'),
+        pageSize: any(named: 'pageSize'),
+      ),
+    ).thenAnswer((invocation) async {
+      final slug = invocation.namedArguments[#slug] as String;
+      final cursor = invocation.namedArguments[#cursor] as String?;
+      if (slug == 'trending') {
+        return RemoteSeriesPage(
+          title: 'Hot',
+          page: cursor == null ? 1 : 2,
+          items: cursor == null ? [hotA, hotB] : [hotB, hotC],
+          hasMore: cursor == null,
+          nextCursor: cursor == null ? 'hot-cursor' : null,
+        );
+      }
+      if (slug == 'new') {
+        return RemoteSeriesPage(
+          title: 'New',
+          page: cursor == null ? 1 : 2,
+          items: cursor == null ? [newA] : [newB],
+          hasMore: cursor == null,
+          nextCursor: cursor == null ? 'new-cursor' : null,
+        );
+      }
+      return RemoteSeriesPage(
+        title: 'Romance',
+        page: cursor == null ? 1 : 2,
+        items: cursor == null ? [romanceA] : [romanceA, romanceB],
+        hasMore: cursor == null,
+        nextCursor: cursor == null ? 'romance-cursor' : null,
+      );
+    });
+
+    final remoteContainer = ProviderContainer(
+      overrides: [
+        seriesRepositoryProvider.overrideWithValue(remote),
+      ],
+    );
+    addTearDown(remoteContainer.dispose);
+
+    final initial = await remoteContainer.read(discoverNotifierProvider.future);
+    expect(initial.series.map((item) => item.id), ['hot-a', 'hot-b']);
+    expect(initial.hasMore, isTrue);
+    expect(initial.nextCursor, 'hot-cursor');
+
+    final notifier = remoteContainer.read(discoverNotifierProvider.notifier);
+    await notifier.loadMore();
+    var state = remoteContainer.read(discoverNotifierProvider).requireValue;
+    expect(state.series.map((item) => item.id), ['hot-a', 'hot-b', 'hot-c']);
+    verify(
+      () => remote.collectionPage(
+        slug: 'trending',
+        page: 2,
+        cursor: 'hot-cursor',
+        sort: 'hot',
+        pageSize: 30,
+      ),
+    ).called(1);
+
+    await notifier.selectTab(DiscoverHomeTab.newReleases);
+    await notifier.loadMore();
+    state = remoteContainer.read(discoverNotifierProvider).requireValue;
+    expect(state.series.map((item) => item.id), ['new-a', 'new-b']);
+
+    await notifier.selectCategory(Category.romance);
+    await notifier.loadMore();
+    state = remoteContainer.read(discoverNotifierProvider).requireValue;
+    expect(state.series.map((item) => item.id), ['romance-a', 'romance-b']);
+  });
 }
+
+Series _series(String id, String title, Category category) => Series(
+      id: id,
+      title: title,
+      coverUrl: 'u',
+      category: category,
+      createdAt: DateTime.utc(2026),
+    );

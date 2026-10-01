@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:better_player_plus/better_player_plus.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:share_plus/share_plus.dart';
@@ -17,10 +18,9 @@ import '../../../data/remote/content_api_models.dart';
 import '../../../domain/entities/episode.dart';
 import '../../../domain/entities/playable_media.dart';
 import '../../../domain/entities/series.dart';
-import '../../../domain/entities/user.dart';
 import '../../../domain/entities/watch_history_entry.dart';
 import '../../../l10n/app_localizations.dart';
-import '../../../shared/widgets/save_series_button.dart';
+import '../../../shared/widgets/player_actions.dart';
 import '../../../shared/widgets/app_pressable.dart';
 import '../application/episode_access.dart';
 import 'episode_player_view.dart';
@@ -90,6 +90,7 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
   int _currentIndex = 0;
   int _generation = 0;
   bool _loading = true;
+  bool _playerMounted = false;
   bool _controllerReady = false;
   bool _paused = false;
   bool _ended = false;
@@ -113,6 +114,8 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
     _controller = BetterPlayerController(
       const BetterPlayerConfiguration(
         autoPlay: false,
+        autoDispose: false,
+        handleLifecycle: false,
         looping: false,
         fit: BoxFit.cover,
         controlsConfiguration: BetterPlayerControlsConfiguration(
@@ -249,10 +252,20 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
     }
 
     try {
-      final media = await _mediaFor(episode);
-      if (!mounted || generation != _generation) return;
-      _candidateSequence = PlaybackCandidateSequence(media);
-      await _setupCandidate(generation, autoplay: autoplay);
+      await mountPlayerBeforeSetup(
+        playerMounted: _playerMounted,
+        mountPlayer: () async {
+          if (!mounted || generation != _generation) return;
+          setState(() => _playerMounted = true);
+        },
+        frameReady: _waitEndOfFrame,
+        resolveMedia: () => _mediaFor(episode),
+        setupMedia: (media) async {
+          if (!mounted || generation != _generation) return;
+          _candidateSequence = PlaybackCandidateSequence(media);
+          await _setupCandidate(generation, autoplay: autoplay);
+        },
+      );
     } catch (error) {
       if (_candidateSequence == null) {
         if (!mounted || generation != _generation) return;
@@ -396,6 +409,10 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
             chapterIndex: canonicalChapterIndex(episode),
           ),
     );
+  }
+
+  Future<void> _waitEndOfFrame() async {
+    await SchedulerBinding.instance.endOfFrame;
   }
 
   Future<void> _recordHistory({bool force = false}) async {
@@ -566,7 +583,7 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
               children: [
                 _EpisodeBackdrop(episode: item),
                 if (active &&
-                    _controllerReady &&
+                    _playerMounted &&
                     itemAccess == EpisodeAccessState.open)
                   Positioned.fill(
                     child: IgnorePointer(
@@ -579,7 +596,6 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
                             );
                           }
                           return BetterPlayer(
-                            key: ValueKey('main_player_${item.id}'),
                             controller: _controller,
                           );
                         },
@@ -734,9 +750,6 @@ class _MainPlayerChrome extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
-    final user = ProviderScope.containerOf(context)
-        .read(currentAppUserDocProvider)
-        .value;
     final content = Stack(
       fit: StackFit.expand,
       children: [
@@ -842,7 +855,6 @@ class _MainPlayerChrome extends StatelessWidget {
             child: _PlayerRail(
               series: series,
               episode: episode,
-              user: user,
               onEpisodes: onEpisodes,
               onShare: onShare,
             ),
@@ -883,31 +895,28 @@ class _MainPlayerChrome extends StatelessWidget {
   }
 }
 
-class _PlayerRail extends ConsumerWidget {
+class _PlayerRail extends StatelessWidget {
   const _PlayerRail({
     required this.series,
     required this.episode,
-    required this.user,
     required this.onEpisodes,
     required this.onShare,
   });
 
   final Series series;
   final Episode episode;
-  final AppUser? user;
   final VoidCallback? onEpisodes;
   final VoidCallback? onShare;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context)!;
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        SaveSeriesCircleButton(
-            seriesId: series.id, series: series, countLabel: l10n.save),
+        PlayerSaveAction(series: series, label: l10n.save),
         const SizedBox(height: 14),
-        _LikeRailAction(user: user, episode: episode),
+        PlayerLikeAction(episode: episode),
         const SizedBox(height: 14),
         _RailAction(
             icon: Icons.playlist_play_rounded,
@@ -921,77 +930,11 @@ class _PlayerRail extends ConsumerWidget {
   }
 }
 
-class _LikeRailAction extends ConsumerStatefulWidget {
-  const _LikeRailAction({required this.user, required this.episode});
-
-  final AppUser? user;
-  final Episode episode;
-
-  @override
-  ConsumerState<_LikeRailAction> createState() => _LikeRailActionState();
-}
-
-class _LikeRailActionState extends ConsumerState<_LikeRailAction> {
-  bool? _optimisticLiked;
-
-  @override
-  void didUpdateWidget(covariant _LikeRailAction oldWidget) {
-    super.didUpdateWidget(oldWidget);
-    if (oldWidget.episode.id != widget.episode.id ||
-        oldWidget.user?.id != widget.user?.id) {
-      _optimisticLiked = null;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context)!;
-    final liked = _optimisticLiked ??
-        (widget.user?.likedEpisodeIds.contains(widget.episode.id) ?? false);
-    return _RailAction(
-      icon: liked ? Icons.favorite : Icons.favorite_border,
-      label: l10n.like,
-      color: liked ? AppColors.primary : Colors.white,
-      onTap: () => _toggle(context, liked),
-    );
-  }
-
-  Future<void> _toggle(BuildContext context, bool liked) async {
-    final user = widget.user;
-    if (user == null) {
-      await context.push('/login');
-      return;
-    }
-    final next = !liked;
-    setState(() => _optimisticLiked = next);
-    try {
-      await ref.read(socialActionsGatewayProvider).setEpisodeLiked(
-            episodeId: widget.episode.id,
-            liked: next,
-          );
-      if (mounted) setState(() => _optimisticLiked = null);
-    } catch (error) {
-      if (!mounted) return;
-      setState(() => _optimisticLiked = liked);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(localizedFriendlyErrorFor(context, error).message),
-        ),
-      );
-    }
-  }
-}
-
 class _RailAction extends StatelessWidget {
-  const _RailAction(
-      {required this.icon,
-      required this.label,
-      this.color = Colors.white,
-      this.onTap});
+  const _RailAction({required this.icon, required this.label, this.onTap});
 
   final IconData icon;
   final String label;
-  final Color color;
   final VoidCallback? onTap;
 
   @override
@@ -1004,7 +947,7 @@ class _RailAction extends StatelessWidget {
         child: Column(
           children: [
             Icon(icon,
-                color: color,
+                color: Colors.white,
                 size: 31,
                 shadows: const [Shadow(color: Colors.black87, blurRadius: 8)]),
             const SizedBox(height: 3),

@@ -12,6 +12,11 @@ class DiscoverState {
     this.hero,
     this.isLoading = false,
     this.error,
+    this.page = 1,
+    this.hasMore = false,
+    this.nextCursor,
+    this.isLoadingMore = false,
+    this.loadMoreError,
   });
 
   final Category currentCategory;
@@ -21,6 +26,11 @@ class DiscoverState {
   final Series? hero;
   final bool isLoading;
   final String? error;
+  final int page;
+  final bool hasMore;
+  final String? nextCursor;
+  final bool isLoadingMore;
+  final Object? loadMoreError;
 
   DiscoverState copyWith({
     Category? currentCategory,
@@ -31,6 +41,13 @@ class DiscoverState {
     bool clearHero = false,
     bool? isLoading,
     String? error,
+    int? page,
+    bool? hasMore,
+    String? nextCursor,
+    bool clearNextCursor = false,
+    bool? isLoadingMore,
+    Object? loadMoreError,
+    bool clearLoadMoreError = false,
   }) {
     return DiscoverState(
       currentCategory: currentCategory ?? this.currentCategory,
@@ -40,6 +57,12 @@ class DiscoverState {
       hero: clearHero ? null : hero ?? this.hero,
       isLoading: isLoading ?? this.isLoading,
       error: error ?? this.error,
+      page: page ?? this.page,
+      hasMore: hasMore ?? this.hasMore,
+      nextCursor: clearNextCursor ? null : nextCursor ?? this.nextCursor,
+      isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      loadMoreError:
+          clearLoadMoreError ? null : loadMoreError ?? this.loadMoreError,
     );
   }
 }

@@ -1,6 +1,7 @@
 import 'package:better_player_plus/better_player_plus.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shortigo/domain/entities/episode.dart';
+import 'package:shortigo/domain/entities/playable_media.dart';
 import 'package:shortigo/features/episode_player/presentation/main_player_page.dart';
 import 'package:shortigo/features/episode_player/presentation/playback_data_source.dart';
 
@@ -22,6 +23,26 @@ void main() {
     expect(resolveInitialEpisodeIndex(episodes, null), 1);
   });
 
+  test('main player mounts before resolving and setting up media', () async {
+    final events = <String>[];
+
+    await mountPlayerBeforeSetup(
+      playerMounted: false,
+      mountPlayer: () async => events.add('mount'),
+      frameReady: () async => events.add('frame'),
+      resolveMedia: () async {
+        events.add('resolve');
+        return const PlayableMedia(
+          primaryUrl: 'https://cdn.example.test/video.m3u8',
+          candidateUrls: ['https://cdn.example.test/video.m3u8'],
+        );
+      },
+      setupMedia: (_) async => events.add('setup'),
+    );
+
+    expect(events, ['mount', 'frame', 'resolve', 'setup']);
+  });
+
   test('deep link resolves requested episode before playback', () {
     expect(resolveInitialEpisodeIndex(episodes, 'ep7'), 6);
   });
@@ -41,6 +62,7 @@ void main() {
     expect(clampSeekPosition(50, 100), 50);
     expect(clampSeekPosition(120, 100), 100);
     expect(clampSeekPosition(50, 0), 0);
+    expect(clampSeekPosition(60000 * .5, 60000), 30000);
   });
 
   test('playback uses explicit source chapter index when provided', () {

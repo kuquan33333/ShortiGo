@@ -41,13 +41,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Discover'), findsWidgets);
+    expect(find.text('Home'), findsWidgets);
 
-    await tester.tap(find.text('Shorts'));
+    await tester.tap(find.text('For You'));
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 250));
 
-    expect(find.text('Shorts'), findsWidgets);
+    expect(find.text('For You'), findsWidgets);
 
     await tester.tap(find.text('My List'));
     await tester.pump();

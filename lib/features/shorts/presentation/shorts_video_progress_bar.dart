@@ -2,89 +2,59 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_colors.dart';
 
-/// Thin playback progress with a soft glow, shown at the top of Shorts videos.
+int shortsSeekTargetMilliseconds(double fraction, int durationMs) {
+  if (durationMs <= 0) return 0;
+  return (fraction.clamp(0.0, 1.0) * durationMs).round();
+}
+
+/// Thin, seekable playback progress with a larger invisible touch target.
 class ShortsVideoProgressBar extends StatelessWidget {
   const ShortsVideoProgressBar({
     super.key,
     required this.progress,
+    required this.durationMs,
     this.visible = true,
+    this.onSeekStart,
+    this.onSeekChanged,
+    this.onSeekEnd,
   });
 
   /// Normalized playback position in `[0, 1]`.
   final double progress;
+  final int durationMs;
   final bool visible;
+  final ValueChanged<double>? onSeekStart;
+  final ValueChanged<double>? onSeekChanged;
+  final ValueChanged<double>? onSeekEnd;
 
   @override
   Widget build(BuildContext context) {
-    final topPadding = MediaQuery.paddingOf(context).top;
-    final target = visible ? progress.clamp(0.0, 1.0) : 0.0;
+    final target = progress.clamp(0.0, 1.0).toDouble();
+    final active = visible && durationMs > 0 && onSeekChanged != null;
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return IgnorePointer(
-      child: AnimatedOpacity(
-        opacity: visible ? 1 : 0,
-        duration: const Duration(milliseconds: 220),
-        child: Padding(
-          padding: EdgeInsets.only(top: topPadding + 8, left: 16, right: 16),
-          child: SizedBox(
-            height: 1.5,
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return TweenAnimationBuilder<double>(
-                  // Smoothly interpolate between progress samples.
-                  tween: Tween<double>(begin: 0, end: target),
-                  duration: const Duration(milliseconds: 280),
-                  curve: Curves.linear,
-                  builder: (context, value, _) {
-                    final fillWidth = constraints.maxWidth * value;
-
-                    return Stack(
-                      clipBehavior: Clip.none,
-                      children: [
-                        DecoratedBox(
-                          decoration: BoxDecoration(
-                            color: Colors.white.withValues(alpha: 0.14),
-                            borderRadius: BorderRadius.circular(1),
-                          ),
-                          child: const SizedBox.expand(),
-                        ),
-                        if (fillWidth > 0)
-                          Positioned(
-                            left: 0,
-                            top: -0.75,
-                            bottom: -0.75,
-                            width: fillWidth,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(1.5),
-                                gradient: const LinearGradient(
-                                  colors: [
-                                    AppColors.primaryLight,
-                                    AppColors.accent,
-                                  ],
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: AppColors.primary
-                                        .withValues(alpha: 0.6),
-                                    blurRadius: 6,
-                                    spreadRadius: 0.2,
-                                  ),
-                                  BoxShadow(
-                                    color: AppColors.accent
-                                        .withValues(alpha: 0.4),
-                                    blurRadius: 10,
-                                    spreadRadius: 0.4,
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                      ],
-                    );
-                  },
-                );
-              },
-            ),
+    return AnimatedOpacity(
+      opacity: visible ? 1 : 0,
+      duration: const Duration(milliseconds: 220),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(12, 0, 12, bottomInset + 4),
+        child: SliderTheme(
+          data: SliderTheme.of(context).copyWith(
+            trackHeight: 2,
+            thumbShape: const RoundSliderThumbShape(enabledThumbRadius: 3),
+            overlayShape: const RoundSliderOverlayShape(overlayRadius: 16),
+            activeTrackColor: AppColors.primary,
+            inactiveTrackColor: Colors.white38,
+            thumbColor: Colors.white,
+            overlayColor: AppColors.primary.withValues(alpha: .18),
+          ),
+          child: Slider(
+            value: target,
+            min: 0,
+            max: 1,
+            onChangeStart: active ? onSeekStart : null,
+            onChanged: active ? onSeekChanged : null,
+            onChangeEnd: active ? onSeekEnd : null,
           ),
         ),
       ),

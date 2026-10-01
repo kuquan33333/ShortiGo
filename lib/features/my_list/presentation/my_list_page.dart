@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 import '../../../core/error/friendly_error.dart';
 import '../../../shared/widgets/error_view.dart';
 import '../../../shared/widgets/loading_view.dart';
+import '../../../shared/widgets/app_pressable.dart';
 import '../../discover/presentation/series_card.dart';
 import '../../../l10n/app_localizations.dart';
 import '../../../core/theme/app_colors.dart';
@@ -24,29 +25,38 @@ class MyListPage extends ConsumerWidget {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: AppBar(
-          title: Text(l10n.myList),
-          bottom: TabBar(
-            tabs: [
-              Tab(text: l10n.watchHistory),
-              Tab(text: l10n.savedSeries),
+        body: SafeArea(
+          child: Column(
+            children: [
+              TabBar(
+                overlayColor: const WidgetStatePropertyAll(Colors.transparent),
+                dividerColor: Colors.transparent,
+                dividerHeight: 0,
+                indicatorColor: AppColors.primary,
+                tabs: [
+                  Tab(text: l10n.watchHistory),
+                  Tab(text: l10n.savedSeries),
+                ],
+              ),
+              Expanded(
+                child: async.when(
+                  loading: () => const LoadingView(),
+                  error: (error, _) => ErrorView(
+                    error: localizedFriendlyErrorFor(context, error),
+                    onRetry: () => ref.invalidate(myListNotifierProvider),
+                  ),
+                  data: (state) {
+                    return TabBarView(
+                      children: [
+                        _HistoryList(history: state.history),
+                        _SavedGrid(series: state.series),
+                      ],
+                    );
+                  },
+                ),
+              ),
             ],
           ),
-        ),
-        body: async.when(
-          loading: () => const LoadingView(),
-          error: (error, _) => ErrorView(
-            error: localizedFriendlyErrorFor(context, error),
-            onRetry: () => ref.invalidate(myListNotifierProvider),
-          ),
-          data: (state) {
-            return TabBarView(
-              children: [
-                _HistoryList(history: state.history),
-                _SavedGrid(series: state.series),
-              ],
-            );
-          },
         ),
       ),
     );
@@ -104,11 +114,10 @@ class _HistoryList extends StatelessWidget {
         final progress = entry.durationMs > 0
             ? (entry.positionMs / entry.durationMs).clamp(0.0, 1.0)
             : 0.0;
-        return InkWell(
+        return AppPressable(
           onTap: () => context.push(
             '/watch/${entry.seriesId}?episodeId=${Uri.encodeComponent(entry.episodeId)}&resumeMs=${entry.positionMs}',
           ),
-          borderRadius: BorderRadius.circular(12),
           child: Row(
             children: [
               SizedBox(

@@ -18,6 +18,12 @@ class AppLocalizationsVi extends AppLocalizations {
   String get shorts => 'Phim ngắn';
 
   @override
+  String get homeNav => 'Trang chủ';
+
+  @override
+  String get forYouNav => 'Đề xuất';
+
+  @override
   String get rewards => 'Phần thưởng';
 
   @override
