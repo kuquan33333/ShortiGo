@@ -60,7 +60,7 @@ class EpisodePlayerNotifier
         return EpisodePlayerState(episode: episode);
       }
 
-      var media = await videoSource.playableMedia(
+      final media = await videoSource.playableMedia(
         seriesId: args.seriesId,
         episodeId: args.episodeId,
         storagePath: episode.videoUrl,
@@ -79,24 +79,28 @@ class EpisodePlayerNotifier
         ),
       );
       var sequence = PlaybackCandidateSequence(media);
-      var resolvedAgain = false;
       while (true) {
         try {
           await controller.setupDataSource(
             buildNetworkVideoDataSource(sequence.currentUrl),
           );
           break;
-        } on Object {
-          if (sequence.moveNext()) continue;
-          if (resolvedAgain) rethrow;
-          resolvedAgain = true;
-          media = await videoSource.playableMedia(
-            seriesId: args.seriesId,
-            episodeId: args.episodeId,
-            storagePath: episode.videoUrl,
-            chapterIndex: canonicalChapterIndex(episode),
+        } on Object catch (error, stackTrace) {
+          await recoverPlaybackCandidates(
+            sequence: sequence,
+            setup: (url) => controller.setupDataSource(
+              buildNetworkVideoDataSource(url),
+            ),
+            refresh: () => videoSource.playableMedia(
+              seriesId: args.seriesId,
+              episodeId: args.episodeId,
+              storagePath: episode.videoUrl,
+              chapterIndex: canonicalChapterIndex(episode),
+            ),
+            currentError: error,
+            currentStack: stackTrace,
           );
-          sequence = PlaybackCandidateSequence(media);
+          break;
         }
       }
 

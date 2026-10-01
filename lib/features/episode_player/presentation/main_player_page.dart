@@ -9,6 +9,7 @@ import 'package:share_plus/share_plus.dart';
 
 import '../../../core/error/friendly_error.dart';
 import '../../../core/async/retryable_future_cache.dart';
+import '../../../core/env/env.dart';
 import '../../../core/providers.dart';
 import '../../../core/theme/app_colors.dart';
 import '../../../data/local/local_library_repository.dart';
@@ -320,29 +321,25 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
         'candidateIndex=${sequence.currentIndex} '
         'playerException=${error.runtimeType}',
       );
-      while (mounted && generation == _generation) {
-        if (sequence.moveNext()) {
-          try {
-            await _setupCandidate(generation, autoplay: !_paused);
-            return;
-          } on Object catch (candidateError) {
+      try {
+        await recoverPlaybackCandidates(
+          sequence: sequence,
+          setup: (_) => _setupCandidate(generation, autoplay: !_paused),
+          refresh: () async {
+            _mediaCache.remove(episode.id);
+            _playbackLog('watchRefresh=START');
+            final refreshed = await _mediaFor(episode);
             _playbackLog(
-              'candidateIndex=${sequence.currentIndex} '
-              'setupException=${candidateError.runtimeType}',
+              'watchRefresh=OK candidateCount=${refreshed.candidateUrls.length}',
             );
-            continue;
-          }
-        }
-        if (!sequence.canResolveAgain) break;
-        _mediaCache.remove(episode.id);
-        try {
-          final refreshed = await _mediaFor(episode);
-          sequence.replaceAfterResolve(refreshed);
-          continue;
-        } on Object catch (resolveError) {
-          _playbackLog('watchResolveRetry=${resolveError.runtimeType}');
-          break;
-        }
+            return refreshed;
+          },
+          currentError: error,
+          currentStack: StackTrace.current,
+        );
+        return;
+      } on Object catch (recoveryError) {
+        _playbackLog('recoveryFailed=${recoveryError.runtimeType}');
       }
       if (!mounted || generation != _generation) return;
       setState(() {
@@ -455,7 +452,9 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
   }
 
   void _playbackLog(String message) {
-    if (kDebugMode) debugPrint('[playback] $message');
+    if (kDebugMode || activeEnv.vipTestMode) {
+      debugPrint('[playback] $message');
+    }
   }
 
   Future<void> _showEpisodes() async {

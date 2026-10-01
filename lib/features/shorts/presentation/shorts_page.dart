@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:better_player_plus/better_player_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +10,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../core/error/friendly_error.dart';
 import '../../../core/async/retryable_future_cache.dart';
+import '../../../core/env/env.dart';
 import '../../../core/providers.dart';
 import '../../../data/local/local_library_repository.dart';
 import '../../../data/remote/content_api_models.dart';
@@ -455,8 +457,8 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
   Future<void> _setupCandidate(int generation, Episode episode) async {
     final sequence = _candidateSequence;
     if (sequence == null || !mounted || generation != _playGeneration) return;
-    debugPrint(
-      '[playback] seriesId=${episode.seriesId} episodeId=${episode.id} '
+    _playbackLog(
+      'seriesId=${episode.seriesId} episodeId=${episode.id} '
       'candidateIndex=${sequence.currentIndex} '
       'candidateCount=${sequence.candidateCount} '
       'mediaKind=${playbackMediaKind(sequence.currentUrl).name} setup=START',
@@ -471,8 +473,8 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
       _isLoading = false;
       _hasError = false;
     });
-    debugPrint(
-      '[playback] seriesId=${episode.seriesId} episodeId=${episode.id} '
+    _playbackLog(
+      'seriesId=${episode.seriesId} episodeId=${episode.id} '
       'candidateIndex=${sequence.currentIndex} setup=OK',
     );
 
@@ -497,38 +499,34 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
         _isLoading = true;
         _hasError = false;
       });
-      debugPrint(
-        '[playback] seriesId=${episode.seriesId} episodeId=${episode.id} '
+      _playbackLog(
+        'seriesId=${episode.seriesId} episodeId=${episode.id} '
         'candidateIndex=${sequence.currentIndex} '
         'playerException=${error.runtimeType}',
       );
-      while (mounted && generation == _playGeneration) {
-        if (sequence.moveNext()) {
-          try {
-            await _setupCandidate(generation, episode);
-            return;
-          } on Object catch (candidateError) {
-            debugPrint(
-              '[playback] episodeId=${episode.id} '
-              'candidateIndex=${sequence.currentIndex} '
-              'setupException=${candidateError.runtimeType}',
+      try {
+        await recoverPlaybackCandidates(
+          sequence: sequence,
+          setup: (_) => _setupCandidate(generation, episode),
+          refresh: () async {
+            _mediaCache.remove(episode.id);
+            _playbackLog('watchRefresh=START episodeId=${episode.id}');
+            final refreshed = await _mediaFor(episode);
+            _playbackLog(
+              'watchRefresh=OK episodeId=${episode.id} '
+              'candidateCount=${refreshed.candidateUrls.length}',
             );
-            continue;
-          }
-        }
-        if (!sequence.canResolveAgain) break;
-        _mediaCache.remove(episode.id);
-        try {
-          final refreshed = await _mediaFor(episode);
-          sequence.replaceAfterResolve(refreshed);
-          continue;
-        } on Object catch (resolveError) {
-          debugPrint(
-            '[playback] episodeId=${episode.id} '
-            'watchResolveRetry=${resolveError.runtimeType}',
-          );
-          break;
-        }
+            return refreshed;
+          },
+          currentError: error,
+          currentStack: StackTrace.current,
+        );
+        return;
+      } on Object catch (recoveryError) {
+        _playbackLog(
+          'episodeId=${episode.id} '
+          'recoveryFailed=${recoveryError.runtimeType}',
+        );
       }
       if (mounted && generation == _playGeneration) {
         setState(() {
@@ -551,6 +549,12 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
             chapterIndex: canonicalChapterIndex(episode),
           ),
     );
+  }
+
+  void _playbackLog(String message) {
+    if (kDebugMode || activeEnv.vipTestMode) {
+      debugPrint('[playback] $message');
+    }
   }
 
   Future<void> _recordShortsHistory() async {

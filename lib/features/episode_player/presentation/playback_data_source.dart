@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:better_player_plus/better_player_plus.dart';
 
+import '../../../data/remote/content_api_models.dart';
 import '../../../domain/entities/episode.dart';
 import '../../../domain/entities/playable_media.dart';
 
@@ -31,6 +32,76 @@ class PlaybackCandidateSequence {
     _index = 0;
     _resolveRetryUsed = true;
   }
+}
+
+typedef PlaybackCandidateSetup = Future<void> Function(String url);
+typedef PlaybackCandidateRefresh = Future<PlayableMedia> Function();
+
+/// Continues recovery after the currently mounted candidate has failed.
+///
+/// The refreshed media is always attempted at index zero before advancing to
+/// another refreshed candidate. This is shared by the main player, Shorts,
+/// and the legacy episode player so their retry semantics cannot diverge.
+Future<void> recoverPlaybackCandidates({
+  required PlaybackCandidateSequence sequence,
+  required PlaybackCandidateSetup setup,
+  required PlaybackCandidateRefresh refresh,
+  Object? currentError,
+  StackTrace? currentStack,
+}) async {
+  Object? lastError = currentError;
+  StackTrace? lastStack = currentStack;
+
+  if (currentError != null && _isNonRetryablePlaybackError(currentError)) {
+    if (currentStack != null) {
+      Error.throwWithStackTrace(currentError, currentStack);
+    }
+    throw currentError;
+  }
+
+  while (true) {
+    if (sequence.moveNext()) {
+      try {
+        await setup(sequence.currentUrl);
+        return;
+      } on Object catch (error, stackTrace) {
+        if (_isNonRetryablePlaybackError(error)) {
+          Error.throwWithStackTrace(error, stackTrace);
+        }
+        lastError = error;
+        lastStack = stackTrace;
+        continue;
+      }
+    }
+
+    if (!sequence.canResolveAgain) {
+      if (lastError != null && lastStack != null) {
+        Error.throwWithStackTrace(lastError, lastStack);
+      }
+      throw StateError('playback-candidates-exhausted');
+    }
+
+    final refreshed = await refresh();
+    sequence.replaceAfterResolve(refreshed);
+    try {
+      await setup(sequence.currentUrl);
+      return;
+    } on Object catch (error, stackTrace) {
+      if (_isNonRetryablePlaybackError(error)) {
+        Error.throwWithStackTrace(error, stackTrace);
+      }
+      lastError = error;
+      lastStack = stackTrace;
+    }
+  }
+}
+
+bool _isNonRetryablePlaybackError(Object error) {
+  if (error is ContentApiSourceLockedException) return true;
+  if (error is! ContentApiException) return false;
+  return error.code == 'source-locked' ||
+      error.code == 'source-unavailable' ||
+      error.statusCode == 403;
 }
 
 PlaybackMediaKind playbackMediaKind(String url) {
