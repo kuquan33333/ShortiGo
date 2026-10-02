@@ -99,15 +99,44 @@ class DiscoverNotifier extends AsyncNotifier<DiscoverState> {
   Future<void> selectTab(DiscoverHomeTab tab) async {
     final previous = state.valueOrNull;
     if (tab == DiscoverHomeTab.categories) {
+      const category = Category.recommended;
+      final cached = _categoryFeeds[category];
       state = AsyncData(
-        DiscoverState(
-          currentCategory: previous?.currentCategory ?? Category.forYou,
-          selectedTab: tab,
-          series: previous?.series ?? const [],
-          sections: previous?.sections ?? const [],
-          hero: previous?.hero,
+        _tabState(
+          previous,
+          tab: tab,
+          category: category,
+          series: cached?.items ?? const [],
+          feed: cached,
         ),
       );
+      if (cached != null) return;
+
+      try {
+        final series = await _loadCategory(category);
+        final current = state.valueOrNull;
+        if (current?.selectedTab != tab ||
+            current?.currentCategory != category) {
+          return;
+        }
+        state = AsyncData(
+          _tabState(
+            current ?? previous,
+            tab: tab,
+            category: category,
+            series: series,
+            feed: _categoryFeeds[category],
+          ),
+        );
+      } catch (error, stackTrace) {
+        final current = state.valueOrNull;
+        if (current?.selectedTab == tab &&
+            current?.currentCategory == category) {
+          state = AsyncError<DiscoverState>(error, stackTrace).copyWithPrevious(
+            state,
+          );
+        }
+      }
       return;
     }
     final cached = _tabFeeds[tab];
@@ -151,7 +180,7 @@ class DiscoverNotifier extends AsyncNotifier<DiscoverState> {
         previous,
         tab: DiscoverHomeTab.categories,
         category: category,
-        series: cached?.items ?? previous?.series ?? const [],
+        series: cached?.items ?? const [],
         feed: cached,
       ),
     );

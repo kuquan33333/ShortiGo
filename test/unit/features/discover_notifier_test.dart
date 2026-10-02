@@ -106,6 +106,173 @@ void main() {
     );
   });
 
+  test('opening categories loads recommended instead of reusing hot', () async {
+    final remote = _MockRemoteSeriesRepository();
+    final hot = _series('hot', 'Hot', Category.hot);
+    final recommended =
+        _series('recommended', 'Recommended', Category.recommended);
+
+    when(() => remote.homeCatalog()).thenAnswer(
+      (_) async => RemoteHomeCatalog(heroes: [hot]),
+    );
+    when(() => remote.ranked(limit: 60)).thenAnswer((_) async => const []);
+    when(
+      () => remote.collectionPage(
+        slug: any(named: 'slug'),
+        page: any(named: 'page'),
+        cursor: any(named: 'cursor'),
+        sort: any(named: 'sort'),
+        pageSize: any(named: 'pageSize'),
+      ),
+    ).thenAnswer((invocation) async {
+      final slug = invocation.namedArguments[#slug] as String;
+      if (slug == 'trending') {
+        return RemoteSeriesPage(
+          title: 'Hot',
+          page: 1,
+          items: [hot],
+          hasMore: false,
+        );
+      }
+      if (slug == 'recommended') {
+        return RemoteSeriesPage(
+          title: 'Recommended',
+          page: 1,
+          items: [recommended],
+          hasMore: true,
+          nextCursor: 'recommended-cursor',
+        );
+      }
+      return const RemoteSeriesPage(
+        title: 'Other',
+        page: 1,
+        items: [],
+        hasMore: false,
+      );
+    });
+
+    final remoteContainer = ProviderContainer(
+      overrides: [seriesRepositoryProvider.overrideWithValue(remote)],
+    );
+    addTearDown(remoteContainer.dispose);
+
+    await remoteContainer.read(discoverNotifierProvider.future);
+    final notifier = remoteContainer.read(discoverNotifierProvider.notifier);
+    await notifier.selectTab(DiscoverHomeTab.categories);
+
+    final state = remoteContainer.read(discoverNotifierProvider).requireValue;
+    expect(state.currentCategory, Category.recommended);
+    expect(state.series.map((item) => item.id), ['recommended']);
+    expect(state.hasMore, isTrue);
+    expect(state.nextCursor, 'recommended-cursor');
+    verify(
+      () => remote.collectionPage(
+        slug: 'recommended',
+        page: 1,
+        cursor: null,
+        sort: 'hot',
+        pageSize: 30,
+      ),
+    ).called(1);
+  });
+
+  test('recommended category pagination is restored after switching tabs',
+      () async {
+    final remote = _MockRemoteSeriesRepository();
+    final hot = _series('hot', 'Hot', Category.hot);
+    final recommendedA =
+        _series('recommended-a', 'Recommended A', Category.recommended);
+    final recommendedB =
+        _series('recommended-b', 'Recommended B', Category.recommended);
+
+    when(() => remote.homeCatalog()).thenAnswer(
+      (_) async => RemoteHomeCatalog(heroes: [hot]),
+    );
+    when(() => remote.ranked(limit: 60)).thenAnswer((_) async => const []);
+    when(
+      () => remote.collectionPage(
+        slug: any(named: 'slug'),
+        page: any(named: 'page'),
+        cursor: any(named: 'cursor'),
+        sort: any(named: 'sort'),
+        pageSize: any(named: 'pageSize'),
+      ),
+    ).thenAnswer((invocation) async {
+      final slug = invocation.namedArguments[#slug] as String;
+      final cursor = invocation.namedArguments[#cursor] as String?;
+      if (slug == 'trending') {
+        return RemoteSeriesPage(
+          title: 'Hot',
+          page: 1,
+          items: [hot],
+          hasMore: false,
+        );
+      }
+      if (slug == 'recommended' && cursor == null) {
+        return RemoteSeriesPage(
+          title: 'Recommended',
+          page: 1,
+          items: [recommendedA],
+          hasMore: true,
+          nextCursor: 'recommended-cursor',
+        );
+      }
+      if (slug == 'recommended') {
+        return RemoteSeriesPage(
+          title: 'Recommended',
+          page: 2,
+          items: [recommendedB],
+          hasMore: false,
+        );
+      }
+      return const RemoteSeriesPage(
+        title: 'Other',
+        page: 1,
+        items: [],
+        hasMore: false,
+      );
+    });
+
+    final remoteContainer = ProviderContainer(
+      overrides: [seriesRepositoryProvider.overrideWithValue(remote)],
+    );
+    addTearDown(remoteContainer.dispose);
+
+    await remoteContainer.read(discoverNotifierProvider.future);
+    final notifier = remoteContainer.read(discoverNotifierProvider.notifier);
+    await notifier.selectTab(DiscoverHomeTab.categories);
+    await notifier.loadMore();
+    await notifier.selectTab(DiscoverHomeTab.hot);
+    await notifier.selectTab(DiscoverHomeTab.categories);
+
+    final state = remoteContainer.read(discoverNotifierProvider).requireValue;
+    expect(state.currentCategory, Category.recommended);
+    expect(state.series.map((item) => item.id), [
+      'recommended-a',
+      'recommended-b',
+    ]);
+    expect(state.page, 2);
+    expect(state.hasMore, isFalse);
+    verify(
+      () => remote.collectionPage(
+        slug: 'recommended',
+        page: 1,
+        cursor: null,
+        sort: 'hot',
+        pageSize: 30,
+      ),
+    ).called(1);
+    verify(
+      () => remote.collectionPage(
+        slug: 'recommended',
+        page: 2,
+        cursor: 'recommended-cursor',
+        sort: 'hot',
+        pageSize: 30,
+      ),
+    ).called(1);
+  });
+
   test('remote feeds append cursor pages for hot, new, and categories',
       () async {
     final remote = _MockRemoteSeriesRepository();
