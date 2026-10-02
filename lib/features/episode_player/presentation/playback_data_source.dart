@@ -48,6 +48,16 @@ Future<void> mountPlayerBeforeSetup({
   await setupMedia(media);
 }
 
+/// Pauses an existing native source without touching a controller that has
+/// not received its first data source yet.
+Future<void> pauseIfInitialized({
+  required bool initialized,
+  required Future<void> Function() pause,
+}) async {
+  if (!initialized) return;
+  await pause();
+}
+
 typedef PlaybackCandidateSetup = Future<void> Function(String url);
 typedef PlaybackCandidateRefresh = Future<PlayableMedia> Function();
 

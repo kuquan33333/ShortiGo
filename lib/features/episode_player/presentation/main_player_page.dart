@@ -143,7 +143,7 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (shouldPauseVideoForLifecycle(state)) {
       _paused = true;
-      unawaited(_controller.pause());
+      unawaited(_pauseIfInitialized());
       unawaited(_recordHistory(force: true));
     }
   }
@@ -245,7 +245,7 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
         ref.read(effectiveVipProvider).value ?? user?.isVip ?? false;
     if (accessFor(episode, user, effectiveVip: effectiveVip) !=
         EpisodeAccessState.open) {
-      await _controller.pause();
+      await _pauseIfInitialized();
       if (!mounted || generation != _generation) return;
       setState(() => _loading = false);
       return;
@@ -287,13 +287,13 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
     final sequence = _candidateSequence;
     if (sequence == null || !mounted || generation != _generation) return;
     final url = sequence.currentUrl;
+    await _pauseIfInitialized();
+    if (!mounted || generation != _generation) return;
     _playbackLog(
       'candidateIndex=${sequence.currentIndex} '
       'candidateCount=${sequence.candidateCount} '
       'mediaKind=${playbackMediaKind(url).name} setup=START',
     );
-    await _controller.pause();
-    if (!mounted || generation != _generation) return;
     await _controller.setupDataSource(buildNetworkVideoDataSource(url));
     if (!mounted || generation != _generation) return;
     setState(() {
@@ -312,8 +312,23 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
     _playbackLog(
       'candidateIndex=${sequence.currentIndex} setup=OK',
     );
-    if (autoplay) await _controller.play();
+    if (autoplay) {
+      _playbackLog('play=START');
+      await _controller.play();
+    }
     _prefetchAdjacent(_currentIndex);
+  }
+
+  Future<void> _pauseIfInitialized() async {
+    final initialized = _controller.videoPlayerController != null;
+    _playbackLog(
+      'controllerInitialized=$initialized '
+      'pause=${initialized ? 'START' : 'SKIP'}',
+    );
+    await pauseIfInitialized(
+      initialized: initialized,
+      pause: _controller.pause,
+    );
   }
 
   Future<void> _handlePlaybackFailure(int generation, Object error) async {

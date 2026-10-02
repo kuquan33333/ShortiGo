@@ -43,6 +43,61 @@ void main() {
     expect(events, ['mount', 'frame', 'resolve', 'setup']);
   });
 
+  test('initial candidate skips pause until the controller is initialized',
+      () async {
+    final events = <String>[];
+    var initialized = false;
+
+    await pauseIfInitialized(
+      initialized: initialized,
+      pause: () async => events.add('pause'),
+    );
+    events.add('setup');
+    initialized = true;
+    events.add('play');
+
+    expect(events, ['setup', 'play']);
+  });
+
+  test('switching candidates pauses the initialized source before setup',
+      () async {
+    final events = <String>[];
+
+    await pauseIfInitialized(
+      initialized: true,
+      pause: () async => events.add('pause'),
+    );
+    events.add('setup');
+    events.add('play');
+
+    expect(events, ['pause', 'setup', 'play']);
+  });
+
+  test('candidate retry keeps setup order after the initial candidate fails',
+      () async {
+    final events = <String>[];
+    var initialized = false;
+
+    Future<void> setupCandidate(String candidate) async {
+      await pauseIfInitialized(
+        initialized: initialized,
+        pause: () async => events.add('pause $candidate'),
+      );
+      events.add('setup $candidate');
+      initialized = true;
+      if (candidate == 'A') throw StateError('candidate-failed');
+      events.add('play $candidate');
+    }
+
+    try {
+      await setupCandidate('A');
+    } on StateError {
+      await setupCandidate('B');
+    }
+
+    expect(events, ['setup A', 'pause B', 'setup B', 'play B']);
+  });
+
   test('deep link resolves requested episode before playback', () {
     expect(resolveInitialEpisodeIndex(episodes, 'ep7'), 6);
   });
