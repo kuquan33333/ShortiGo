@@ -62,6 +62,9 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
   final _historyRecordedEpisodeIds = <String>{};
   PlaybackCandidateSequence? _candidateSequence;
   bool _handlingPlaybackFailure = false;
+  PlaybackWatchdog? _playbackWatchdog;
+  bool _receivedPlaybackReadyEvent = false;
+  final _failedEpisodeIds = <String>{};
 
   @override
   void initState() {
@@ -77,6 +80,7 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
     WidgetsBinding.instance.removeObserver(this);
     _playerMounted = false;
     _mediaCache.clear();
+    _playbackWatchdog?.cancel();
     _playerController.dispose(forceDispose: true);
     _pageController.dispose();
     super.dispose();
@@ -93,6 +97,12 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
   void _onPlayerEvent(BetterPlayerEvent event) {
     if (!mounted) {
       return;
+    }
+
+    if (event.betterPlayerEventType == BetterPlayerEventType.initialized ||
+        event.betterPlayerEventType == BetterPlayerEventType.progress) {
+      _receivedPlaybackReadyEvent = true;
+      _playbackWatchdog?.cancel();
     }
 
     switch (event.betterPlayerEventType) {
@@ -381,6 +391,7 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
       _playbackProgress = 0;
       _seekPreviewProgress = null;
       _playbackDurationMs = 0;
+      _receivedPlaybackReadyEvent = false;
       _isPausedByUser = false;
     });
     _prefetchUrls(episodes);
@@ -440,7 +451,9 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
     }
 
     final episode = episodes[index];
+    _failedEpisodeIds.remove(episode.id);
     final generation = ++_playGeneration;
+    _playbackWatchdog?.cancel();
     final user = ref.read(currentAppUserDocProvider).value;
     final effectiveVip = await ref.read(effectiveVipProvider.future);
     if (accessFor(episode, user, effectiveVip: effectiveVip) !=
@@ -518,11 +531,21 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
       'seriesId=${episode.seriesId} episodeId=${episode.id} '
       'candidateIndex=${sequence.currentIndex} '
       'candidateCount=${sequence.candidateCount} '
+      'attempt=${sequence.currentAttempt} '
+      'provider=${sequence.provider ?? 'unknown'} '
+      'quality=${sequence.currentCandidate.quality ?? 'unknown'} '
+      'host=${playbackHost(sequence.currentUrl)} '
       'mediaKind=${playbackMediaKind(sequence.currentUrl).name} setup=START',
     );
-    await _playerController.setupDataSource(
-      buildNetworkVideoDataSource(sequence.currentUrl),
-    );
+    _startPlaybackWatchdog(generation, sequence, episode);
+    try {
+      await _playerController.setupDataSource(
+        buildNetworkVideoDataSource(sequence.currentCandidate),
+      );
+    } catch (_) {
+      _playbackWatchdog?.cancel();
+      rethrow;
+    }
     if (!mounted || generation != _playGeneration) return;
 
     setState(() {
@@ -538,6 +561,35 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
     await _waitEndOfFrame();
     if (!mounted || generation != _playGeneration) return;
     await _safePlay();
+  }
+
+  void _startPlaybackWatchdog(
+    int generation,
+    PlaybackCandidateSequence sequence,
+    Episode episode,
+  ) {
+    _playbackWatchdog?.cancel();
+    _playbackWatchdog = PlaybackWatchdog(
+      timeout: const Duration(seconds: 8),
+      onTimeout: () {
+        if (!mounted ||
+            generation != _playGeneration ||
+            _receivedPlaybackReadyEvent) {
+          return;
+        }
+        _playbackLog(
+          'seriesId=${episode.seriesId} episodeId=${episode.id} '
+          'candidateIndex=${sequence.currentIndex} '
+          'candidateCount=${sequence.candidateCount} initialize=TIMEOUT',
+        );
+        unawaited(
+          _handlePlaybackFailure(
+            generation,
+            StateError('playback-initialize-timeout'),
+          ),
+        );
+      },
+    )..start();
   }
 
   Future<void> _handlePlaybackFailure(int generation, Object error) async {
@@ -559,7 +611,7 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
       _playbackLog(
         'seriesId=${episode.seriesId} episodeId=${episode.id} '
         'candidateIndex=${sequence.currentIndex} '
-        'playerException=${error.runtimeType}',
+        'playerException=${sanitizePlaybackError(error)}',
       );
       try {
         await recoverPlaybackCandidates(
@@ -582,10 +634,25 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
       } on Object catch (recoveryError) {
         _playbackLog(
           'episodeId=${episode.id} '
-          'recoveryFailed=${recoveryError.runtimeType}',
+          'recoveryFailed=${sanitizePlaybackError(recoveryError)}',
         );
       }
       if (mounted && generation == _playGeneration) {
+        _failedEpisodeIds.add(episode.id);
+        final nextIndex = _nextHealthyEpisodeIndex(episodes, _current);
+        if (nextIndex != null) {
+          _playbackLog(
+            'episodeId=${episode.id} marked=FAILED '
+            'advanceTo=${episodes[nextIndex].id}',
+          );
+          unawaited(
+            _pageController.nextPage(
+              duration: const Duration(milliseconds: 260),
+              curve: Curves.easeOutCubic,
+            ),
+          );
+          return;
+        }
         setState(() {
           _hasError = true;
           _isLoading = false;
@@ -594,6 +661,20 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
     } finally {
       _handlingPlaybackFailure = false;
     }
+  }
+
+  int? _nextHealthyEpisodeIndex(List<Episode> episodes, int currentIndex) {
+    for (var index = currentIndex + 1; index < episodes.length; index++) {
+      final episode = episodes[index];
+      if (_failedEpisodeIds.contains(episode.id)) continue;
+      if (!episode.sourceAvailable ||
+          episode.sourceLocked ||
+          episode.isVipLocked) {
+        continue;
+      }
+      return index;
+    }
+    return null;
   }
 
   Future<PlayableMedia> _mediaFor(Episode episode) {

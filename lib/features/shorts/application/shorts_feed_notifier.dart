@@ -7,6 +7,7 @@ import '../../../core/providers.dart';
 import '../../../domain/entities/category.dart';
 import '../../../domain/entities/episode.dart';
 import '../../../domain/entities/series.dart';
+import '../../episode_player/presentation/playback_data_source.dart';
 
 const shortsFeedEpisodeLimit = 50;
 const shortsCandidateLimit = 30;
@@ -59,6 +60,7 @@ class ShortsFeedNotifier extends AsyncNotifier<ShortsFeedState> {
     return withTrace('shorts_load', () async {
       final seriesRepo = ref.read(seriesRepositoryProvider);
       final episodeRepo = ref.read(episodeRepositoryProvider);
+      final videoSource = ref.read(videoSourceProvider);
       final groups = await Future.wait([
         seriesRepo.byCategory(Category.forYou, limit: shortsCandidateLimit),
         seriesRepo.byCategory(Category.hot, limit: shortsCandidateLimit),
@@ -86,7 +88,18 @@ class ShortsFeedNotifier extends AsyncNotifier<ShortsFeedState> {
                       !episode.isVipLocked)
                   .toList()
                 ..sort((a, b) => a.order.compareTo(b.order));
-              return playable.isEmpty ? null : (series, playable.first);
+              if (playable.isEmpty) return null;
+              final episode = playable.first;
+              // Catalog metadata only says that the episode is public. Resolve
+              // /watch once, with the same bounded chapter concurrency as the
+              // episode requests, so known-dead media never enters Shorts.
+              final media = await videoSource.playableMedia(
+                seriesId: series.id,
+                episodeId: episode.id,
+                storagePath: episode.videoUrl,
+                chapterIndex: canonicalChapterIndex(episode),
+              );
+              return media.candidateUrls.isEmpty ? null : (series, episode);
             } catch (_) {
               return null;
             }

@@ -97,6 +97,8 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
   bool _showingTransientPause = false;
   double? _seekPreview;
   Timer? _transientControlTimer;
+  PlaybackWatchdog? _playbackWatchdog;
+  bool _receivedPlaybackReadyEvent = false;
   double _position = 0;
   double _duration = 0;
   Object? _error;
@@ -133,6 +135,7 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
     _pageController.dispose();
     _mediaCache.clear();
     _transientControlTimer?.cancel();
+    _playbackWatchdog?.cancel();
     _controller
       ..removeEventsListener(_onPlayerEvent)
       ..dispose(forceDispose: true);
@@ -178,6 +181,11 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
 
   void _onPlayerEvent(BetterPlayerEvent event) {
     if (!mounted) return;
+    if (event.betterPlayerEventType == BetterPlayerEventType.initialized ||
+        event.betterPlayerEventType == BetterPlayerEventType.progress) {
+      _receivedPlaybackReadyEvent = true;
+      _playbackWatchdog?.cancel();
+    }
     if (event.betterPlayerEventType == BetterPlayerEventType.exception) {
       if (_loading || _handlingPlaybackFailure) return;
       final exception = event.parameters?['exception'];
@@ -219,6 +227,7 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
   Future<void> _switchToEpisode(int index, {required bool autoplay}) async {
     if (index < 0 || index >= _episodes.length) return;
     final generation = ++_generation;
+    _playbackWatchdog?.cancel();
     final episode = _episodes[index];
     _mediaCache.retainOnly(
       _episodes
@@ -237,6 +246,7 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
       _ended = false;
       _position = 0;
       _duration = 0;
+      _receivedPlaybackReadyEvent = false;
       _showingTransientPause = false;
       _seekPreview = null;
     });
@@ -292,9 +302,21 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
     _playbackLog(
       'candidateIndex=${sequence.currentIndex} '
       'candidateCount=${sequence.candidateCount} '
+      'attempt=${sequence.currentAttempt} '
+      'provider=${sequence.provider ?? 'unknown'} '
+      'quality=${sequence.currentCandidate.quality ?? 'unknown'} '
+      'host=${playbackHost(url)} '
       'mediaKind=${playbackMediaKind(url).name} setup=START',
     );
-    await _controller.setupDataSource(buildNetworkVideoDataSource(url));
+    _startPlaybackWatchdog(generation, sequence);
+    try {
+      await _controller.setupDataSource(
+        buildNetworkVideoDataSource(sequence.currentCandidate),
+      );
+    } catch (_) {
+      _playbackWatchdog?.cancel();
+      rethrow;
+    }
     if (!mounted || generation != _generation) return;
     setState(() {
       _loading = false;
@@ -317,6 +339,34 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
       await _controller.play();
     }
     _prefetchAdjacent(_currentIndex);
+  }
+
+  void _startPlaybackWatchdog(
+    int generation,
+    PlaybackCandidateSequence sequence,
+  ) {
+    _playbackWatchdog?.cancel();
+    _playbackWatchdog = PlaybackWatchdog(
+      timeout: const Duration(seconds: 8),
+      onTimeout: () {
+        if (!mounted ||
+            generation != _generation ||
+            _receivedPlaybackReadyEvent) {
+          return;
+        }
+        _playbackLog(
+          'candidateIndex=${sequence.currentIndex} '
+          'candidateCount=${sequence.candidateCount} '
+          'initialize=TIMEOUT',
+        );
+        unawaited(
+          _handlePlaybackFailure(
+            generation,
+            StateError('playback-initialize-timeout'),
+          ),
+        );
+      },
+    )..start();
   }
 
   Future<void> _pauseIfInitialized() async {
@@ -347,7 +397,7 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
       });
       _playbackLog(
         'candidateIndex=${sequence.currentIndex} '
-        'playerException=${error.runtimeType}',
+        'playerException=${sanitizePlaybackError(error)}',
       );
       try {
         await recoverPlaybackCandidates(

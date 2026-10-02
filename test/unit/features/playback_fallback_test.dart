@@ -17,7 +17,7 @@ void main() {
       failures: {'A'},
     );
 
-    expect(attempts, ['A', 'B']);
+    expect(attempts, ['A', 'A', 'B']);
     expect(refreshCount, 1);
   });
 
@@ -33,7 +33,7 @@ void main() {
       failures: {'A', 'B', 'C'},
     );
 
-    expect(attempts, ['A', 'B', 'C', 'D']);
+    expect(attempts, ['A', 'A', 'B', 'B', 'C', 'C', 'D']);
     expect(refreshCount, 1);
   });
 
@@ -53,8 +53,38 @@ void main() {
       throwsA(isA<StateError>()),
     );
 
-    expect(attempts, ['A', 'A2']);
+    expect(attempts, ['A', 'A', 'A2', 'A2']);
     expect(refreshCount, 1);
+  });
+
+  test('same candidate succeeds on its bounded second attempt', () async {
+    final attempts = <String>[];
+    final sequence = PlaybackCandidateSequence(_media(['A']));
+    var refreshCount = 0;
+
+    Future<void> setup(String url) async {
+      attempts.add(url);
+      if (attempts.length == 1) throw StateError('transient');
+    }
+
+    try {
+      await setup(sequence.currentUrl);
+    } on Object catch (error, stackTrace) {
+      await recoverPlaybackCandidates(
+        sequence: sequence,
+        setup: (candidate) => setup(candidate.url),
+        refresh: () async {
+          refreshCount++;
+          return _media(['B']);
+        },
+        currentError: error,
+        currentStack: stackTrace,
+      );
+    }
+
+    expect(attempts, ['A', 'A']);
+    expect(refreshCount, 0);
+    expect(sequence.currentAttempt, 2);
   });
 
   test('source locked does not resolve another candidate to bypass the lock',
@@ -67,7 +97,7 @@ void main() {
       recoverPlaybackCandidates(
         sequence: sequence,
         currentError: const ContentApiSourceLockedException(),
-        setup: (url) async => attempts.add(url),
+        setup: (candidate) async => attempts.add(candidate.url),
         refresh: () async {
           refreshCount++;
           return _media(['C']);
@@ -102,7 +132,7 @@ Future<void> _runRecovery({
       sequence: sequence,
       currentError: error,
       currentStack: stackTrace,
-      setup: setup,
+      setup: (candidate) => setup(candidate.url),
       refresh: () async {
         refreshCount();
         return refreshed;

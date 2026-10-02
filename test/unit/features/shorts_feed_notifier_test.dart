@@ -6,6 +6,8 @@ import 'package:shortigo/domain/entities/episode.dart';
 import 'package:shortigo/domain/entities/series.dart';
 import 'package:shortigo/domain/interfaces/episode_repository.dart';
 import 'package:shortigo/domain/interfaces/series_repository.dart';
+import 'package:shortigo/domain/interfaces/video_source.dart';
+import 'package:shortigo/domain/entities/playable_media.dart';
 import 'package:shortigo/features/shorts/application/shorts_feed_notifier.dart';
 
 void main() {
@@ -53,6 +55,7 @@ void main() {
             ],
           }),
         ),
+        videoSourceProvider.overrideWithValue(_FakeVideoSource()),
       ],
     );
     addTearDown(container.dispose);
@@ -95,6 +98,7 @@ void main() {
         episodeRepositoryProvider.overrideWithValue(
           _FakeEpisodeRepository(episodes),
         ),
+        videoSourceProvider.overrideWithValue(_FakeVideoSource()),
       ],
     );
     addTearDown(container.dispose);
@@ -106,6 +110,55 @@ void main() {
         hasLength(state.episodes.length));
     expect(state.episodes.every((episode) => episode.order == 3), isTrue);
   });
+
+  test('shorts feed excludes a public episode whose watch resolve fails',
+      () async {
+    final series = [_series('good'), _series('dead')];
+    final container = ProviderContainer(
+      overrides: [
+        currentAppUserDocProvider.overrideWith((_) => Stream.value(null)),
+        seriesRepositoryProvider.overrideWithValue(
+          _FakeSeriesRepository(series),
+        ),
+        episodeRepositoryProvider.overrideWithValue(
+          _FakeEpisodeRepository({
+            'good': [_episode('good_e1', 'good', 1)],
+            'dead': [_episode('dead_e1', 'dead', 1)],
+          }),
+        ),
+        videoSourceProvider.overrideWithValue(
+          _FakeVideoSource(failedEpisodeIds: {'dead_e1'}),
+        ),
+      ],
+    );
+    addTearDown(container.dispose);
+
+    final state = await container.read(shortsFeedNotifierProvider.future);
+
+    expect(state.episodes.map((episode) => episode.id), ['good_e1']);
+  });
+}
+
+class _FakeVideoSource implements VideoSource {
+  const _FakeVideoSource({this.failedEpisodeIds = const {}});
+
+  final Set<String> failedEpisodeIds;
+
+  @override
+  Future<PlayableMedia> playableMedia({
+    required String seriesId,
+    required String episodeId,
+    required String storagePath,
+    int? chapterIndex,
+  }) async {
+    if (failedEpisodeIds.contains(episodeId)) {
+      throw StateError('media-unavailable');
+    }
+    return PlayableMedia(
+      primaryUrl: 'https://cdn.example.test/$episodeId.mp4',
+      candidateUrls: ['https://cdn.example.test/$episodeId.mp4'],
+    );
+  }
 }
 
 class _FakeSeriesRepository implements SeriesRepository {

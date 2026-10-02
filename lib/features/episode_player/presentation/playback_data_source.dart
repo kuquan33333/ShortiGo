@@ -1,6 +1,8 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:better_player_plus/better_player_plus.dart';
+import 'package:flutter/foundation.dart';
 
 import '../../../data/remote/content_api_models.dart';
 import '../../../domain/entities/episode.dart';
@@ -9,27 +11,43 @@ import '../../../domain/entities/playable_media.dart';
 enum PlaybackMediaKind { hls, mp4, unknown }
 
 class PlaybackCandidateSequence {
-  PlaybackCandidateSequence(PlayableMedia media) : _media = media;
+  PlaybackCandidateSequence(PlayableMedia media)
+      : _media = media,
+        _attempt = 1;
 
   PlayableMedia _media;
   int _index = 0;
   bool _resolveRetryUsed = false;
+  int _attempt;
 
-  String get currentUrl => _media.candidateUrls[_index];
+  PlaybackCandidate get currentCandidate => _media.typedCandidates[_index];
+  String get currentUrl => currentCandidate.url;
+  String? get provider => currentCandidate.provider ?? _media.provider;
+  Map<String, String> get headers => currentCandidate.headers;
   int get currentIndex => _index;
-  int get candidateCount => _media.candidateUrls.length;
-  bool get hasNext => _index + 1 < _media.candidateUrls.length;
+  int get candidateCount => _media.typedCandidates.length;
+  int get currentAttempt => _attempt;
+  bool get hasNext => _index + 1 < candidateCount;
+  bool get canRetryCurrent => _attempt < 2;
   bool get canResolveAgain => !_resolveRetryUsed;
+
+  bool retryCurrent() {
+    if (!canRetryCurrent) return false;
+    _attempt++;
+    return true;
+  }
 
   bool moveNext() {
     if (!hasNext) return false;
     _index++;
+    _attempt = 1;
     return true;
   }
 
   void replaceAfterResolve(PlayableMedia media) {
     _media = media;
     _index = 0;
+    _attempt = 1;
     _resolveRetryUsed = true;
   }
 }
@@ -58,8 +76,31 @@ Future<void> pauseIfInitialized({
   await pause();
 }
 
-typedef PlaybackCandidateSetup = Future<void> Function(String url);
+typedef PlaybackCandidateSetup = Future<void> Function(
+  PlaybackCandidate candidate,
+);
 typedef PlaybackCandidateRefresh = Future<PlayableMedia> Function();
+
+class PlaybackWatchdog {
+  PlaybackWatchdog({
+    required this.timeout,
+    required this.onTimeout,
+  });
+
+  final Duration timeout;
+  final VoidCallback onTimeout;
+  Timer? _timer;
+
+  void start() {
+    _timer?.cancel();
+    _timer = Timer(timeout, onTimeout);
+  }
+
+  void cancel() {
+    _timer?.cancel();
+    _timer = null;
+  }
+}
 
 /// Continues recovery after the currently mounted candidate has failed.
 ///
@@ -84,9 +125,22 @@ Future<void> recoverPlaybackCandidates({
   }
 
   while (true) {
+    if (sequence.retryCurrent()) {
+      try {
+        await setup(sequence.currentCandidate);
+        return;
+      } on Object catch (error, stackTrace) {
+        if (_isNonRetryablePlaybackError(error)) {
+          Error.throwWithStackTrace(error, stackTrace);
+        }
+        lastError = error;
+        lastStack = stackTrace;
+      }
+    }
+
     if (sequence.moveNext()) {
       try {
-        await setup(sequence.currentUrl);
+        await setup(sequence.currentCandidate);
         return;
       } on Object catch (error, stackTrace) {
         if (_isNonRetryablePlaybackError(error)) {
@@ -108,7 +162,7 @@ Future<void> recoverPlaybackCandidates({
     final refreshed = await refresh();
     sequence.replaceAfterResolve(refreshed);
     try {
-      await setup(sequence.currentUrl);
+      await setup(sequence.currentCandidate);
       return;
     } on Object catch (error, stackTrace) {
       if (_isNonRetryablePlaybackError(error)) {
@@ -148,22 +202,58 @@ int canonicalChapterIndex(Episode episode) {
   return episode.sourceChapterIndex ?? math.max(0, episode.order - 1);
 }
 
+bool shouldUsePlaybackCache(
+  PlaybackCandidate candidate, {
+  TargetPlatform? platform,
+}) {
+  final resolvedPlatform = platform ?? defaultTargetPlatform;
+  if (resolvedPlatform == TargetPlatform.iOS ||
+      resolvedPlatform == TargetPlatform.macOS) {
+    return false;
+  }
+
+  final kind = playbackMediaKind(candidate.url);
+  if (kind == PlaybackMediaKind.hls) return false;
+  if (candidate.provider?.toLowerCase() == 'netshort') return false;
+
+  // BetterPlayer's iOS CachingPlayerItem cannot infer a media type from an
+  // opaque URL. Keep opaque MP4 URLs out of the cache path on other platforms
+  // too; direct .mp4 URLs remain cacheable on Android.
+  final path = Uri.tryParse(candidate.url)?.path ?? '';
+  if (kind == PlaybackMediaKind.mp4 && !path.toLowerCase().endsWith('.mp4')) {
+    return false;
+  }
+  return kind == PlaybackMediaKind.mp4;
+}
+
 /// Builds the one network source configuration used by every player surface.
-///
-/// BetterPlayer Plus uses an iOS reverse-proxy cache for HLS. Signed playlist
-/// URLs from the public resolver are short-lived, so bypass that cache path
-/// for HLS while retaining the existing cache behavior for direct MP4 files.
-BetterPlayerDataSource buildNetworkVideoDataSource(String url) {
-  final kind = playbackMediaKind(url);
+BetterPlayerDataSource buildNetworkVideoDataSource(
+  PlaybackCandidate candidate, {
+  TargetPlatform? platform,
+}) {
+  final kind = playbackMediaKind(candidate.url);
   return BetterPlayerDataSource.network(
-    url,
+    candidate.url,
+    headers: candidate.headers.isEmpty ? null : candidate.headers,
     videoFormat: switch (kind) {
       PlaybackMediaKind.hls => BetterPlayerVideoFormat.hls,
       PlaybackMediaKind.mp4 => BetterPlayerVideoFormat.other,
       PlaybackMediaKind.unknown => null,
     },
-    cacheConfiguration: kind == PlaybackMediaKind.hls
-        ? const BetterPlayerCacheConfiguration(useCache: false)
-        : const BetterPlayerCacheConfiguration(useCache: true),
+    cacheConfiguration: BetterPlayerCacheConfiguration(
+      useCache: shouldUsePlaybackCache(candidate, platform: platform),
+    ),
   );
+}
+
+String playbackHost(String url) => Uri.tryParse(url)?.host ?? 'unknown';
+
+String sanitizePlaybackError(Object error) {
+  final raw = error.toString();
+  return raw
+      .replaceAll(
+          RegExp(r'([?&](?:auth_key|token|signature|sig)=)[^&\s]+',
+              caseSensitive: false),
+          r'\1<redacted>')
+      .replaceAll(RegExp(r'https?://[^\s)]+'), '<url-redacted>');
 }

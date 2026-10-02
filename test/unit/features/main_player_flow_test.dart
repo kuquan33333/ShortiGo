@@ -1,4 +1,5 @@
 import 'package:better_player_plus/better_player_plus.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shortigo/domain/entities/episode.dart';
 import 'package:shortigo/domain/entities/playable_media.dart';
@@ -132,7 +133,9 @@ void main() {
 
   test('HLS source bypasses BetterPlayer cache proxy', () {
     final source = buildNetworkVideoDataSource(
-      'https://cdn.example.test/video/master.m3u8?token=redacted',
+      const PlaybackCandidate(
+        url: 'https://cdn.example.test/video/master.m3u8?token=redacted',
+      ),
     );
     expect(source.videoFormat, BetterPlayerVideoFormat.hls);
     expect(source.cacheConfiguration?.useCache, isFalse);
@@ -140,9 +143,84 @@ void main() {
 
   test('opaque NetShort URL with media query is treated as MP4', () {
     final source = buildNetworkVideoDataSource(
-      'https://cdn.example.test/opaque?mime_type=video_mp4',
+      const PlaybackCandidate(
+        url: 'https://cdn.example.test/opaque?mime_type=video_mp4',
+        provider: 'netshort',
+      ),
     );
     expect(source.videoFormat, BetterPlayerVideoFormat.other);
-    expect(source.cacheConfiguration?.useCache, isTrue);
+    expect(source.cacheConfiguration?.useCache, isFalse);
+  });
+
+  test('remote playback bypasses cache on iOS for every media kind', () {
+    expect(
+      shouldUsePlaybackCache(
+        const PlaybackCandidate(url: 'https://cdn.example.test/video.mp4'),
+        platform: TargetPlatform.iOS,
+      ),
+      isFalse,
+    );
+    expect(
+      shouldUsePlaybackCache(
+        const PlaybackCandidate(url: 'https://cdn.example.test/video.m3u8'),
+        platform: TargetPlatform.iOS,
+      ),
+      isFalse,
+    );
+    expect(
+      shouldUsePlaybackCache(
+        const PlaybackCandidate(
+          url: 'https://cdn.example.test/opaque?mime_type=video_mp4',
+          provider: 'netshort',
+        ),
+        platform: TargetPlatform.iOS,
+      ),
+      isFalse,
+    );
+  });
+
+  test('Android only caches direct MP4 sources', () {
+    expect(
+      shouldUsePlaybackCache(
+        const PlaybackCandidate(url: 'https://cdn.example.test/video.mp4'),
+        platform: TargetPlatform.android,
+      ),
+      isTrue,
+    );
+    expect(
+      shouldUsePlaybackCache(
+        const PlaybackCandidate(
+          url: 'https://cdn.example.test/opaque?mime_type=video_mp4',
+        ),
+        platform: TargetPlatform.android,
+      ),
+      isFalse,
+    );
+  });
+
+  test('playback watchdog fires only when no ready event arrives', () async {
+    var timedOut = false;
+    final watchdog = PlaybackWatchdog(
+      timeout: const Duration(milliseconds: 1),
+      onTimeout: () => timedOut = true,
+    )..start();
+
+    await Future<void>.delayed(const Duration(milliseconds: 5));
+
+    expect(timedOut, isTrue);
+    watchdog.cancel();
+  });
+
+  test('playback watchdog can be cancelled by an initialized event', () async {
+    var timedOut = false;
+    final watchdog = PlaybackWatchdog(
+      timeout: const Duration(milliseconds: 5),
+      onTimeout: () => timedOut = true,
+    )..start();
+    watchdog.cancel();
+
+    await Future<void>.delayed(const Duration(milliseconds: 10));
+
+    expect(timedOut, isFalse);
   });
 }

@@ -82,14 +82,14 @@ class EpisodePlayerNotifier
       while (true) {
         try {
           await controller.setupDataSource(
-            buildNetworkVideoDataSource(sequence.currentUrl),
+            buildNetworkVideoDataSource(sequence.currentCandidate),
           );
           break;
         } on Object catch (error, stackTrace) {
           await recoverPlaybackCandidates(
             sequence: sequence,
-            setup: (url) => controller.setupDataSource(
-              buildNetworkVideoDataSource(url),
+            setup: (candidate) => controller.setupDataSource(
+              buildNetworkVideoDataSource(candidate),
             ),
             refresh: () => videoSource.playableMedia(
               seriesId: args.seriesId,

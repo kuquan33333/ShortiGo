@@ -55,33 +55,48 @@ class RemoteVideoSource implements VideoSource {
   }
 
   PlayableMedia _toPlayableMedia(ContentApiPlayback playback) {
-    final urls = <String>[];
+    final candidates = <PlaybackCandidate>[];
     final defaultQuality = playback.qualities
         .where((quality) => quality.isDefault)
-        .map((quality) => quality.videoPath)
+        .map((quality) => (quality.videoPath, quality.quality))
         .firstOrNull;
-    _addUrl(urls, defaultQuality);
-    _addUrl(urls, playback.videoUrl);
+    _addCandidate(candidates, defaultQuality?.$1,
+        quality: defaultQuality?.$2, provider: playback.provider);
+    _addCandidate(candidates, playback.videoUrl, provider: playback.provider);
     for (final quality in playback.qualities) {
-      _addUrl(urls, quality.videoPath);
+      _addCandidate(candidates, quality.videoPath,
+          quality: quality.quality, provider: playback.provider);
     }
-    if (urls.isEmpty) {
+    if (candidates.isEmpty) {
       throw const ContentApiException(code: 'invalid-schema');
     }
     return PlayableMedia(
-      primaryUrl: urls.first,
-      candidateUrls: List.unmodifiable(urls),
+      primaryUrl: candidates.first.url,
+      candidateUrls:
+          candidates.map((candidate) => candidate.url).toList(growable: false),
       provider: playback.provider,
+      candidates: List.unmodifiable(candidates),
     );
   }
 
-  void _addUrl(List<String> urls, String? value) {
+  void _addCandidate(
+    List<PlaybackCandidate> candidates,
+    String? value, {
+    required String? provider,
+    int? quality,
+  }) {
     final url = value?.trim() ?? '';
     final uri = Uri.tryParse(url);
     if (uri == null || (uri.scheme != 'http' && uri.scheme != 'https')) {
       return;
     }
-    if (!urls.contains(url)) urls.add(url);
+    if (candidates.any((candidate) => candidate.url == url)) return;
+    candidates.add(PlaybackCandidate(
+      url: url,
+      provider: provider,
+      quality: quality,
+      mediaKind: _mediaKind(url),
+    ));
   }
 
   String _mediaKind(String url) {
@@ -89,6 +104,12 @@ class RemoteVideoSource implements VideoSource {
     final path = uri?.path.toLowerCase() ?? url.toLowerCase();
     if (path.endsWith('.m3u8')) return 'hls';
     if (path.endsWith('.mp4')) return 'mp4';
+    final mimeType = uri?.queryParameters['mime_type']?.toLowerCase();
+    if (mimeType == 'video_mp4' || mimeType == 'video/mp4') return 'mp4';
+    if (mimeType == 'application_mpegurl' ||
+        mimeType == 'application/vnd.apple.mpegurl') {
+      return 'hls';
+    }
     return 'unknown';
   }
 
