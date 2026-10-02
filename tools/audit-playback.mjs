@@ -10,8 +10,8 @@ if (!baseUrl) {
 
 const timeoutMs = 15000;
 const mediaTimeoutMs = 5000;
-const maxSeries = Number(process.env.PLAYBACK_AUDIT_SERIES ?? 60);
-const maxEpisodes = Number(process.env.PLAYBACK_AUDIT_EPISODES ?? 100);
+const maxSeries = Math.max(60, Number(process.env.PLAYBACK_AUDIT_SERIES ?? 60));
+const maxEpisodes = Math.max(100, Number(process.env.PLAYBACK_AUDIT_EPISODES ?? 100));
 const shelves = ['trending', 'new', 'recommended', 'romance', 'action', 'fantasy'];
 const mobileHeaders = {
   'User-Agent':
@@ -322,9 +322,10 @@ function classifyMediaFailure(result) {
 
 async function collectSeries() {
   const map = new Map();
+  const candidateLimit = Math.max(maxSeries * 3, 120);
   for (const slug of shelves) {
     let cursor;
-    for (let page = 1; page <= 4 && map.size < maxSeries * 2; page += 1) {
+    for (let page = 1; page <= 8 && map.size < candidateLimit; page += 1) {
       const params = new URLSearchParams({ pageSize: '30', sort: slug === 'new' ? 'new' : 'hot' });
       if (cursor) params.set('cursor', cursor);
       const result = await jsonApi(`/api/collection/${encodeURIComponent(slug)}/${page}?${params}`);
@@ -338,18 +339,20 @@ async function collectSeries() {
     }
   }
   const all = [...map.values()];
-  const reel = all.filter((item) => item.provider === 'reelshort');
-  const net = all.filter((item) => item.provider === 'netshort');
+  const playableProviders = new Set(['reelshort', 'netshort', 'dramabox']);
+  const playable = all.filter((item) => playableProviders.has(item.provider));
+  const reel = playable.filter((item) => item.provider === 'reelshort');
+  const net = playable.filter((item) => item.provider === 'netshort');
   const preferred = [
     ...reel.slice(0, 20),
     ...net.slice(0, 20),
-    ...all.filter((item) => !['reelshort', 'netshort'].includes(item.provider)),
-    ...all,
+    ...playable.filter((item) => !['reelshort', 'netshort'].includes(item.provider)),
+    ...playable,
   ];
   return unique(preferred.map((item) => item.bookId))
     .map((id) => map.get(id))
     .filter(Boolean)
-    .slice(0, maxSeries);
+    .slice(0, candidateLimit);
 }
 
 function episodeSamples(chapters) {
@@ -363,7 +366,7 @@ function episodeSamples(chapters) {
     .filter(Boolean);
 }
 
-async function auditSeries(series, episodeBudget) {
+async function auditSeries(series, { mode = 'all', episodeBudget = maxEpisodes } = {}) {
   const bookPath = `/api/book/${encodeURIComponent(series.bookId)}`;
   const chaptersPath = `/api/chapters/${encodeURIComponent(series.bookId)}`;
   const book = await jsonApi(bookPath);
@@ -384,11 +387,15 @@ async function auditSeries(series, episodeBudget) {
   }
   const chapterList = chapters.data?.chapterList ?? chapters.data?.list ?? [];
   const lockedCount = chapterList.filter((chapter) => !isPublicChapter(chapter)).length;
-  counters.lockedExpected += lockedCount;
-  if (lockedCount > 0) addClass('LOCKED_EXPECTED');
+  if (mode !== 'extra') {
+    counters.lockedExpected += lockedCount;
+    if (lockedCount > 0) addClass('LOCKED_EXPECTED');
+  }
   const samples = episodeSamples(chapters.data);
-  for (const episode of samples) {
+  const episodesToProbe = mode === 'first' ? samples.slice(0, 1) : mode === 'extra' ? samples.slice(1) : samples;
+  for (const episode of episodesToProbe) {
     if (rows.length >= maxEpisodes) break;
+    if (rows.length >= episodeBudget) break;
     const watch = await jsonApi(
       `/api/watch/${encodeURIComponent(series.bookId)}/${episode.chapterIndex}`,
     );
@@ -486,23 +493,41 @@ function providerStatsNote(series) {
 
 async function main() {
   console.log(`collecting catalog from ${shelves.length} shelves`);
-  const series = await collectSeries();
-  console.log(`selected ${series.length} unique series`);
-  for (const item of series) {
-    await auditSeries(item, maxEpisodes - rows.length);
-    if (rows.length >= maxEpisodes) break;
+  const candidates = await collectSeries();
+  const series = [];
+  console.log(`collected ${candidates.length} catalog candidates`);
+
+  // Pass 1 guarantees breadth: every selected candidate gets exactly one
+  // first-public-episode probe before deeper episode sampling begins.
+  for (const item of candidates) {
+    if (unique(rows.map((row) => row.series.bookId)).length >= maxSeries) break;
+    series.push(item);
+    await auditSeries(item, { mode: 'first', episodeBudget: Number.POSITIVE_INFINITY });
+  }
+  const uniqueMediaProbedSeries = unique(rows.map((row) => row.series.bookId)).length;
+  console.log(`pass 1: selected ${series.length}, media-probed ${uniqueMediaProbedSeries} unique series`);
+
+  // Pass 2 adds middle/late public episodes only after breadth is complete.
+  if (uniqueMediaProbedSeries >= maxSeries) {
+    for (const item of series) {
+      if (rows.length >= maxEpisodes) break;
+      await auditSeries(item, { mode: 'extra', episodeBudget: maxEpisodes });
+    }
   }
   const summary = providerStats();
   await mkdir('docs', { recursive: true });
   const markdown = markdownReport(series, summary)
+    .replace(`Series tested: ${series.length}`, `Catalog series selected: ${series.length}`)
+    .replace(`Public episode probes: ${rows.length}`, `Unique series media-probed: ${uniqueMediaProbedSeries}\n- Public episode probes: ${rows.length}`)
+    .replace('| Provider | Series | Episodes |', '| Provider | Unique series probed | Episodes |')
     .replace('# Playback audit before fix', `# Playback audit ${auditLabel}`);
   await writeFile(`docs/playback-audit-${auditLabel}.md`, markdown);
   await writeFile(
     `docs/playback-audit-${auditLabel}.json`,
-    JSON.stringify({ baseUrl, generatedAt: new Date().toISOString(), series, rows, counters, classes: Object.fromEntries(classes), providerStats: summary }, null, 2),
+    JSON.stringify({ baseUrl, generatedAt: new Date().toISOString(), catalogSeriesSelected: series.length, uniqueMediaProbedSeries, publicEpisodeProbes: rows.length, series, rows, counters, classes: Object.fromEntries(classes), providerStats: summary }, null, 2),
   );
-  console.log(JSON.stringify({ series: series.length, episodes: rows.length, counters, classes: Object.fromEntries(classes), providerStats: summary }, null, 2));
-  if (series.length < 60 || rows.length < 80) process.exitCode = 1;
+  console.log(JSON.stringify({ catalogSeriesSelected: series.length, uniqueMediaProbedSeries, publicEpisodeProbes: rows.length, counters, classes: Object.fromEntries(classes), providerStats: summary }, null, 2));
+  if (uniqueMediaProbedSeries < maxSeries || rows.length < 80) process.exitCode = 1;
 }
 
 await main();

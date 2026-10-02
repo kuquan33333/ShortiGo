@@ -1,8 +1,9 @@
 # Playback audit after
 
 - Base URL: https://drama-6qrppui46-ok-2e47.vercel.app
-- Generated: 2026-10-02T03:11:32.178Z
-- Series tested: 60
+- Generated: 2026-10-02T08:18:38.377Z
+- Catalog series selected: 60
+- Unique series media-probed: 60
 - Public episode probes: 100
 - Episode budget: 100
 
@@ -14,23 +15,23 @@
 | Watch API fail | 0 |
 | Media candidate pass | 100 |
 | Media candidate fail | 0 |
-| Locked expected | 928 |
+| Locked expected | 852 |
 | Timeout | 0 |
 | Content type mismatch | 0 |
 | Range problem | 0 |
 
 ## Provider summary
 
-| Provider | Series | Episodes | Watch pass | Media pass | Failed |
+| Provider | Unique series probed | Episodes | Watch pass | Media pass | Failed |
 |---|---:|---:|---:|---:|---:|
-| reelshort | 23 | 69 | 69 | 69 | 0 |
-| netshort | 23 | 31 | 31 | 31 | 0 |
+| reelshort | 36 | 76 | 76 | 76 | 0 |
+| netshort | 24 | 24 | 24 | 24 | 0 |
 
 ## Failure classes
 
 | Class | Count |
 |---|---:|
-| LOCKED_EXPECTED | 23 |
+| LOCKED_EXPECTED | 24 |
 
 ## Findings
 

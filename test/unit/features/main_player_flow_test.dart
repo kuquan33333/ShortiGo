@@ -223,4 +223,74 @@ void main() {
 
     expect(timedOut, isFalse);
   });
+
+  test('watchdog readiness is scoped to the active candidate attempt', () {
+    // Candidate A was ready, then candidate B became active. B must start
+    // with readiness=false even though the episode generation is unchanged.
+    expect(
+      isPlaybackWatchdogCurrent(
+        episodeGeneration: 7,
+        attemptGeneration: 1,
+        activeEpisodeGeneration: 7,
+        activeAttemptGeneration: 2,
+        candidateReady: true,
+      ),
+      isFalse,
+    );
+    expect(
+      isPlaybackWatchdogCurrent(
+        episodeGeneration: 7,
+        attemptGeneration: 2,
+        activeEpisodeGeneration: 7,
+        activeAttemptGeneration: 2,
+        candidateReady: false,
+      ),
+      isTrue,
+    );
+  });
+
+  test('late watchdog from an old attempt cannot fail the new candidate', () {
+    expect(
+      isPlaybackWatchdogCurrent(
+        episodeGeneration: 3,
+        attemptGeneration: 4,
+        activeEpisodeGeneration: 4,
+        activeAttemptGeneration: 5,
+        candidateReady: false,
+      ),
+      isFalse,
+    );
+  });
+
+  test('new candidate watchdog fires after a ready candidate fails', () async {
+    var activeAttempt = 1;
+    var ready = true;
+    var timeoutCount = 0;
+
+    void schedule(int attempt, Duration timeout) {
+      PlaybackWatchdog(
+        timeout: timeout,
+        onTimeout: () {
+          if (isPlaybackWatchdogCurrent(
+            episodeGeneration: 9,
+            attemptGeneration: attempt,
+            activeEpisodeGeneration: 9,
+            activeAttemptGeneration: activeAttempt,
+            candidateReady: ready,
+          )) {
+            timeoutCount++;
+          }
+        },
+      )..start();
+    }
+
+    schedule(1, const Duration(milliseconds: 8));
+    activeAttempt = 2;
+    ready = false;
+    schedule(2, const Duration(milliseconds: 1));
+
+    await Future<void>.delayed(const Duration(milliseconds: 15));
+
+    expect(timeoutCount, 1);
+  });
 }

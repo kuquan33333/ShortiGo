@@ -32,6 +32,7 @@ import 'shorts_info_panel.dart';
 import 'shorts_video_progress_bar.dart';
 import 'video_card.dart';
 import '../../series_detail/presentation/series_detail_page.dart';
+import '../application/shorts_failed_episode_session.dart';
 
 class ShortsPage extends ConsumerStatefulWidget {
   const ShortsPage({super.key});
@@ -64,7 +65,9 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
   bool _handlingPlaybackFailure = false;
   PlaybackWatchdog? _playbackWatchdog;
   bool _receivedPlaybackReadyEvent = false;
-  final _failedEpisodeIds = <String>{};
+  int _playbackAttemptGeneration = 0;
+  int _activePlaybackAttemptGeneration = 0;
+  final _failedEpisodeIds = ShortsFailedEpisodeSession();
 
   @override
   void initState() {
@@ -258,7 +261,7 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
                             access: access,
                             bonusBalance: user?.bonus ?? 0,
                             onRetry: () => unawaited(
-                              _playEpisodeAt(_current, state.episodes),
+                              _retryEpisode(_current, state.episodes),
                             ),
                             onUnlock: () =>
                                 unawaited(_unlockShortEpisode(episode)),
@@ -451,9 +454,21 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
     }
 
     final episode = episodes[index];
-    _failedEpisodeIds.remove(episode.id);
     final generation = ++_playGeneration;
     _playbackWatchdog?.cancel();
+    if (_failedEpisodeIds.contains(episode.id)) {
+      await _safePause();
+      if (!mounted || generation != _playGeneration) return;
+      setState(() {
+        _attachedEpisodeId = null;
+        _isLoading = false;
+        _hasError = true;
+        _playbackProgress = 0;
+        _seekPreviewProgress = null;
+        _playbackDurationMs = 0;
+      });
+      return;
+    }
     final user = ref.read(currentAppUserDocProvider).value;
     final effectiveVip = await ref.read(effectiveVipProvider.future);
     if (accessFor(episode, user, effectiveVip: effectiveVip) !=
@@ -524,20 +539,30 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
     }
   }
 
+  Future<void> _retryEpisode(int index, List<Episode> episodes) async {
+    if (index < 0 || index >= episodes.length) return;
+    _failedEpisodeIds.clearForRetry(episodes[index].id);
+    await _playEpisodeAt(index, episodes);
+  }
+
   Future<void> _setupCandidate(int generation, Episode episode) async {
     final sequence = _candidateSequence;
     if (sequence == null || !mounted || generation != _playGeneration) return;
+    final attemptGeneration = ++_playbackAttemptGeneration;
+    _activePlaybackAttemptGeneration = attemptGeneration;
+    _receivedPlaybackReadyEvent = false;
     _playbackLog(
       'seriesId=${episode.seriesId} episodeId=${episode.id} '
       'candidateIndex=${sequence.currentIndex} '
       'candidateCount=${sequence.candidateCount} '
       'attempt=${sequence.currentAttempt} '
+      'attemptGeneration=$attemptGeneration '
       'provider=${sequence.provider ?? 'unknown'} '
       'quality=${sequence.currentCandidate.quality ?? 'unknown'} '
       'host=${playbackHost(sequence.currentUrl)} '
       'mediaKind=${playbackMediaKind(sequence.currentUrl).name} setup=START',
     );
-    _startPlaybackWatchdog(generation, sequence, episode);
+    _startPlaybackWatchdog(generation, attemptGeneration, sequence, episode);
     try {
       await _playerController.setupDataSource(
         buildNetworkVideoDataSource(sequence.currentCandidate),
@@ -565,6 +590,7 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
 
   void _startPlaybackWatchdog(
     int generation,
+    int attemptGeneration,
     PlaybackCandidateSequence sequence,
     Episode episode,
   ) {
@@ -573,8 +599,13 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
       timeout: const Duration(seconds: 8),
       onTimeout: () {
         if (!mounted ||
-            generation != _playGeneration ||
-            _receivedPlaybackReadyEvent) {
+            !isPlaybackWatchdogCurrent(
+              episodeGeneration: generation,
+              attemptGeneration: attemptGeneration,
+              activeEpisodeGeneration: _playGeneration,
+              activeAttemptGeneration: _activePlaybackAttemptGeneration,
+              candidateReady: _receivedPlaybackReadyEvent,
+            )) {
           return;
         }
         _playbackLog(
@@ -638,7 +669,7 @@ class _ShortsPageState extends ConsumerState<ShortsPage>
         );
       }
       if (mounted && generation == _playGeneration) {
-        _failedEpisodeIds.add(episode.id);
+        _failedEpisodeIds.markFailed(episode.id);
         final nextIndex = _nextHealthyEpisodeIndex(episodes, _current);
         if (nextIndex != null) {
           _playbackLog(

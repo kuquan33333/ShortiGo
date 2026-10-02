@@ -102,6 +102,21 @@ class PlaybackWatchdog {
   }
 }
 
+/// Returns whether a watchdog callback still belongs to the active candidate
+/// attempt. Readiness is scoped to the attempt rather than the episode so a
+/// previously initialized candidate cannot suppress a later retry watchdog.
+bool isPlaybackWatchdogCurrent({
+  required int episodeGeneration,
+  required int attemptGeneration,
+  required int activeEpisodeGeneration,
+  required int activeAttemptGeneration,
+  required bool candidateReady,
+}) {
+  return episodeGeneration == activeEpisodeGeneration &&
+      attemptGeneration == activeAttemptGeneration &&
+      !candidateReady;
+}
+
 /// Continues recovery after the currently mounted candidate has failed.
 ///
 /// The refreshed media is always attempted at index zero before advancing to

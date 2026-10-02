@@ -99,6 +99,8 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
   Timer? _transientControlTimer;
   PlaybackWatchdog? _playbackWatchdog;
   bool _receivedPlaybackReadyEvent = false;
+  int _playbackAttemptGeneration = 0;
+  int _activePlaybackAttemptGeneration = 0;
   double _position = 0;
   double _duration = 0;
   Object? _error;
@@ -299,16 +301,20 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
     final url = sequence.currentUrl;
     await _pauseIfInitialized();
     if (!mounted || generation != _generation) return;
+    final attemptGeneration = ++_playbackAttemptGeneration;
+    _activePlaybackAttemptGeneration = attemptGeneration;
+    _receivedPlaybackReadyEvent = false;
     _playbackLog(
       'candidateIndex=${sequence.currentIndex} '
       'candidateCount=${sequence.candidateCount} '
       'attempt=${sequence.currentAttempt} '
+      'attemptGeneration=$attemptGeneration '
       'provider=${sequence.provider ?? 'unknown'} '
       'quality=${sequence.currentCandidate.quality ?? 'unknown'} '
       'host=${playbackHost(url)} '
       'mediaKind=${playbackMediaKind(url).name} setup=START',
     );
-    _startPlaybackWatchdog(generation, sequence);
+    _startPlaybackWatchdog(generation, attemptGeneration, sequence);
     try {
       await _controller.setupDataSource(
         buildNetworkVideoDataSource(sequence.currentCandidate),
@@ -343,6 +349,7 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
 
   void _startPlaybackWatchdog(
     int generation,
+    int attemptGeneration,
     PlaybackCandidateSequence sequence,
   ) {
     _playbackWatchdog?.cancel();
@@ -350,8 +357,13 @@ class _MainPlayerPageState extends ConsumerState<MainPlayerPage>
       timeout: const Duration(seconds: 8),
       onTimeout: () {
         if (!mounted ||
-            generation != _generation ||
-            _receivedPlaybackReadyEvent) {
+            !isPlaybackWatchdogCurrent(
+              episodeGeneration: generation,
+              attemptGeneration: attemptGeneration,
+              activeEpisodeGeneration: _generation,
+              activeAttemptGeneration: _activePlaybackAttemptGeneration,
+              candidateReady: _receivedPlaybackReadyEvent,
+            )) {
           return;
         }
         _playbackLog(
